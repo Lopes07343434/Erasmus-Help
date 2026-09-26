@@ -16,7 +16,7 @@ npm run preview    # servir o build de produção
 ## Stack
 
 React 19 · TypeScript 6 (strict, `noUncheckedIndexedAccess`) · Vite 8 · Tailwind CSS 4 (`@tailwindcss/vite`) · react-router 8 (data router, rotas lazy) · zustand 5 (persist) · lucide-react · vite-plugin-pwa (Workbox) · Vitest + Testing Library. Fontes self-hosted: `@fontsource-variable/manrope`, `@fontsource/jetbrains-mono` (500).
-Supabase: **adiado** (decisão do utilizador). Tudo é local-first; a camada de dados está preparada para um repositório remoto sem mudar a API dos stores.
+Supabase: só o **Chat** (auth anónima, Postgres + RLS, Realtime, Storage). O resto da app é local-first (perfil e preferências em localStorage).
 
 ## Design — fonte de verdade
 
@@ -67,10 +67,13 @@ Decisões face ao protótipo: o separador "Explorar" e os conteúdos de exemplo 
 
 ### Chat (comunicação interna entre pessoas)
 Chat real entre alunos, monitores e admins — não é IA nem chamadas, e não se mistura com a tradução presencial (Conversar/Tradutor).
-- Conta: login **anónimo** Supabase por dispositivo após o onboarding; cada utilizador tem um ID público automático e único ("ID 07"), que não é credencial.
-- Papéis: `student` | `monitor` (fica `pending` até um admin verificar) | `admin` (promovido só por SQL no dashboard — ver `supabase/README.md`). Monitores verificados associam alunos por ID (cria a conversa individual); grupos são criados por admins ou monitores verificados com `can_manage_groups`.
+- Conta: login **anónimo** Supabase por dispositivo após o onboarding. Cada conta recebe um ID público sequencial gerado na base de dados (contador com lock, sem buracos, nunca reutilizado nem editável); mostra-se "ID: 01"…"ID: 09", depois "ID: 10", "ID: 100" (`formatPublicId` / `formatPublicIdNumber`). Não é credencial.
+- Diretório aberto: qualquer conta procura pessoas por ID ou nome (`search_profiles`, `usePeopleSearch`), adiciona-as (`start_direct_conversation`) e cria grupos. Quem cria o grupo é **administrador** (`member_role = 'manager'`): adiciona/remove membros, muda nome/foto, promove outros administradores; o grupo nunca fica sem administrador. Fotos de perfil/grupo no bucket público `avatars` (512 px JPEG gerado no browser).
+- Papéis da plataforma: `student` | `monitor` (fica `pending` até um admin verificar; a verificação só conta para a associação aluno↔monitor feita pelos admins) | `admin` (promovido só por SQL no dashboard — ver `supabase/README.md`; vê/gere tudo).
 - Dados: `src/services/chat` (repositório, store zustand, 1 canal Realtime por utilizador, outbox otimista) + hooks `src/hooks/chat` segundo o contrato `src/services/chat/api.ts`. UI em `src/pages/chat` e `src/pages/admin`. Áudio: `src/services/audio` + `src/components/chat/audio`.
 - Segurança: RLS em todas as tabelas, helpers `security definer` no schema `private`, escrita só por RPCs, bucket `chat-audio` privado. `select('*')` em `profiles` é proibido por privilégios de coluna.
+- Desktop (≥1024px): lista de conversas e conversa lado a lado; mobile: lista → conversa.
+- Testes: `npm test` (unitários), `npx supabase test db` (pgTAP) e `npm run test:e2e` (Playwright contra o Supabase local real, `npx supabase start`).
 
 Onboarding: splash → 3 slides de introdução do design → nome → função (Aluno/Monitor) → língua (PT/EN/PL) → localização (país + cidade) → notificações push (opcional, permissão real do browser, nunca simulada).
 
@@ -104,7 +107,7 @@ A meteorologia nunca é gerada por IA.
 - `.env*` ignorados pelo git exceto `.env.example` e `.env.development` (sem segredos).
 - Validar input do utilizador (`utils/validation.ts`) e respostas externas (tratar como `unknown` e validar a forma).
 - Stores validam dados persistidos no `merge` (localStorage pode estar corrompido/adulterado).
-- Quando existir Supabase: RLS em todas as tabelas, policies por `auth.uid()`, anon key só com RLS.
+- Supabase: RLS em todas as tabelas, policies por `auth.uid()`, publishable/anon key só com RLS; permissões verificadas na base de dados, nunca só no frontend.
 
 ## Supabase
 
