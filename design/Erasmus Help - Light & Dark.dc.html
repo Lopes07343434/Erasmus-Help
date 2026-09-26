@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#DCE0E8;font-family:Manrope,system-ui,sans-serif}a{color:#2B5CF5}a:hover{color:#0F1424}</style></helmet>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 24px 0">
+<img src="assets/logo-erasmus-help.png" alt="Erasmus Help" style="width:260px;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,48,.06)">
+</div>
+<div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:24px;padding:8px 24px 40px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:0;width:460px;border-radius:24px;overflow:hidden">
+<dc-import name="Erasmus Help" dark="{{ false }}" hint-size="460px,1010px" style="width:460px"></dc-import>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:0;width:460px;border-radius:24px;overflow:hidden">
+<dc-import name="Erasmus Help" dark="{{ true }}" hint-size="460px,1010px" style="width:460px"></dc-import>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

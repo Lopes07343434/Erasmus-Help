@@ -1,0 +1,16 @@
+import common from './common'
+import nav from './nav'
+import languages from './languages'
+import errors from './errors'
+import onboarding from './onboarding'
+import dashboard from './dashboard'
+import translate from './translate'
+import talk from './talk'
+import settings from './settings'
+import profile from './profile'
+import weather from './weather'
+import pwa from './pwa'
+import chat from './chat'
+import audio from './audio'
+
+export default { common, nav, languages, errors, onboarding, dashboard, translate, talk, settings, profile, weather, pwa, chat, audio }

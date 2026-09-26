@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>
+body{margin:0;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+--page:#E4E7EE;--bg:#F3F4F8;--surface:rgba(255,255,255,.72);--surface-solid:#FFFFFF;--border:rgba(16,24,48,.08);--border-strong:rgba(16,24,48,.16);--text:#0F1424;--text2:#4E566A;--text3:#7F8699;--primary:#2B5CF5;--primary-soft:rgba(43,92,245,.10);--accent:#22C4F5;--grad:linear-gradient(120deg,#2B5CF5 0%,#2B5CF5 35%,#1E8FEA 100%);--danger:#C8322F;--success:#16875A;--nav:rgba(255,255,255,.80);--shadow:0 1px 2px rgba(16,24,48,.04),0 10px 30px -12px rgba(16,24,48,.12);--blob1:rgba(43,92,245,.16);--blob2:rgba(34,196,245,.14);--skel:rgba(16,24,48,.07)}
+a{color:var(--primary)}a:hover{color:var(--text)}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+::-webkit-scrollbar{display:none}
+@keyframes ehFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ehLoad{from{width:0}to{width:100%}}
+@keyframes ehSheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ehBackdrop{from{opacity:0}to{opacity:1}}
+@keyframes ehBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+@keyframes ehListen{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes ehPulse{0%,100%{transform:scale(.97);filter:brightness(1)}50%{transform:scale(1.03);filter:brightness(1.15)}}
+@keyframes ehSpeak{0%,100%{transform:scale(1,1)}30%{transform:scale(1.06,1.03)}60%{transform:scale(1.02,1.06)}}
+@keyframes ehShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes ehSpin{to{transform:rotate(360deg)}}
+@keyframes ehRipple{from{transform:scale(1);opacity:.45}to{transform:scale(1.7);opacity:0}}
+@keyframes ehHalo{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes ehBar{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+@keyframes ehShimmer{0%{opacity:.5}50%{opacity:1}100%{opacity:.5}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+</style>
+</helmet>
+<div style="{{ rootVars }}">
+<div style="min-height:100vh;background:var(--page);display:flex;flex-direction:column;align-items:center;gap:20px;padding:36px 16px 48px;box-sizing:border-box;transition:background .3s">
+<div style="display:flex;align-items:center;gap:10px;color:var(--text2);font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.04em;text-transform:uppercase">
+<span style="width:8px;height:8px;border-radius:50%;background:var(--primary)"></span>Erasmus Help · protótipo mobile v1
+</div>
+
+<div style="position:relative;width:390px;height:844px;flex:none;border-radius:54px;background:var(--bg);overflow:hidden;color:var(--text);box-shadow:0 0 0 10px #0B0C10,0 0 0 11px #2A2C33,0 50px 90px -30px rgba(10,15,40,.45);margin:11px;transition:background .3s,color .3s">
+<div style="position:absolute;inset:0;background:radial-gradient(70% 38% at 90% 0%,var(--blob1),transparent 70%),radial-gradient(60% 34% at 0% 62%,var(--blob2),transparent 70%);pointer-events:none"></div>
+
+<div style="position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 34px;box-sizing:border-box;z-index:30;font-weight:600;font-size:15px;pointer-events:none">
+<span>9:41</span>
+<div style="position:absolute;left:50%;top:11px;width:120px;height:34px;margin-left:-60px;border-radius:20px;background:#000"></div>
+<div style="display:flex;gap:6px;align-items:center;font-size:16px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-full" style="font-size:20px"></i></div>
+</div>
+
+<sc-if value="{{ isSplash }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ skipSplash }}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:5;animation:ehFade .4s ease both;cursor:pointer">
+<div style="position:relative;width:120px;height:120px;display:grid;place-items:center"><div style="position:absolute;inset:-60px;border-radius:50%;background:radial-gradient(circle,var(--blob1) 0%,transparent 65%)"></div><img src="assets/eh-mark.png" alt="Erasmus Help" style="position:relative;width:96px"></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px"><span style="font-size:32px;font-weight:700;letter-spacing:-.025em">Erasmus <span style="color:var(--primary)">Help</span></span><span style="font-size:11px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--text3)">Apoio a estudantes Erasmus</span></div>
+<div style="position:absolute;bottom:90px;left:50%;width:120px;margin-left:-60px;height:3px;border-radius:2px;background:var(--border);overflow:hidden"><div style="height:100%;border-radius:2px;background:var(--grad);animation:ehLoad 1.7s ease both"></div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;padding:56px 24px 40px;box-sizing:border-box;display:flex;flex-direction:column;z-index:5">
+<div style="display:flex;align-items:center;justify-content:space-between;height:48px">
+<div style="display:flex;align-items:center;gap:8px"><img src="assets/eh-mark.png" alt="" style="height:22px"><span style="font-size:15px;font-weight:700;letter-spacing:-.01em">Erasmus <span style="color:var(--primary)">Help</span></span></div>
+<sc-if value="{{ obNotLast }}"><button onClick="{{ skipOb }}" style="height:44px;padding:0 12px;margin-right:-12px;border:none;background:none;color:var(--text2);font-size:15px;font-weight:600;cursor:pointer;border-radius:12px" style-hover="background:var(--primary-soft)">Saltar</button></sc-if>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
+<sc-if value="{{ ob0 }}">
+<div style="position:relative;width:176px;height:176px;display:grid;place-items:center;animation:ehFade .35s ease both"><div style="position:absolute;inset:-70px;border-radius:50%;background:radial-gradient(circle,var(--blob1) 0%,transparent 65%)"></div><div style="position:absolute;inset:0;border-radius:44px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);box-shadow:var(--shadow)"></div><img src="assets/eh-mark.png" alt="Erasmus Help" style="position:relative;width:92px"></div>
+</sc-if>
+<sc-if value="{{ ob1 }}">
+<div style="width:100%;padding:18px;box-sizing:border-box;border-radius:20px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;animation:ehFade .35s ease both">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Reconhecido · Português</span><span style="font-size:16px;line-height:1.4">Onde fica a estação mais próxima?</span></div>
+<div style="height:1px;background:var(--border)"></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:var(--primary);letter-spacing:.04em;text-transform:uppercase">Tradução · Italiano</span><span style="font-size:20px;line-height:1.35;font-weight:600">Dov'è la stazione più vicina?</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(22,135,90,.10);color:var(--success);font-size:12px;font-weight:600"><i class="icon-check"></i>Corrigido</span><span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:600"><i class="icon-volume-2"></i>Ouvir</span></div>
+</div>
+</sc-if>
+<sc-if value="{{ ob2 }}">
+<div style="animation:ehFade .35s ease both"><dc-import name="Conversation Sphere" variant="{{ sphereVariant }}" state="speaking" size="170" hint-size="170px,170px"></dc-import></div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;min-height:150px">
+<h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">{{ obTitle }}</h1>
+<p style="margin:0;font-size:16px;line-height:1.5;color:var(--text2);text-wrap:pretty">{{ obBody }}</p>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px">
+<div style="display:flex;gap:6px" aria-label="{{ obProgress }}">
+<sc-for list="{{ obDots }}" as="d" hint-placeholder-count="3"><span style="height:6px;border-radius:3px;width:{{ d.w }};background:{{ d.bg }};transition:width .3s,background .3s"></span></sc-for>
+</div>
+<button onClick="{{ nextOb }}" style="height:52px;padding:0 24px;border-radius:14px;border:none;background:var(--grad);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 12px 24px -12px var(--primary)" style-hover="filter:brightness(1.06)" style-active="transform:scale(.98)">{{ obCta }}<i class="icon-arrow-right" style="font-size:18px"></i></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:60px 20px 116px;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:26px;animation:ehFade .28s ease both">
+<div style="display:flex;align-items:center;gap:8px;padding-top:4px"><img src="assets/eh-mark.png" alt="" style="height:22px"><span style="font-size:15px;font-weight:700;letter-spacing:-.01em">Erasmus <span style="color:var(--primary)">Help</span></span></div>
+<header style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:6px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<span style="font-size:13px;font-weight:500;color:var(--text3)">Quinta, 25 de setembro</span>
+<h1 style="margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.025em">Olá, Marta</h1>
+</div>
+<div style="display:flex;gap:8px">
+<button aria-label="Notificações" onClick="{{ notifTap }}" style="position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(16px);color:var(--text);font-size:19px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.94)"><i class="icon-bell"></i><span style="position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)"></span></button>
+<button aria-label="Perfil" onClick="{{ goProfile }}" style="width:44px;height:44px;border-radius:50%;border:none;background:var(--primary);color:#fff;font-weight:700;font-size:14px;cursor:pointer" style-active="transform:scale(.94)">MS</button>
+</div>
+</header>
+
+<div style="background:var(--surface);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:19px"><i class="icon-map-pin"></i></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font-size:16px;font-weight:600">Milão, Itália</span>
+<span style="font-size:13px;color:var(--text3)">Semana 3 de 20 · Politecnico di Milano</span>
+</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;color:var(--text2)"><i class="icon-cloud-sun" style="font-size:18px"></i>18°</div>
+</div>
+<div style="height:1px;background:var(--border)"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;color:var(--text3)">Idioma local</span><span style="font-size:14px;font-weight:600">Italiano · B1</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;color:var(--text3)">Próximo prazo</span><span style="font-size:14px;font-weight:600">Codice fiscale · 3 dias</span></div>
+</div>
+</div>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">O que precisas agora?</h2>
+<button onClick="{{ goTalk }}" style="position:relative;overflow:hidden;text-align:left;border:none;border-radius:20px;background:var(--grad);color:#fff;padding:20px;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 14px 30px -14px var(--primary);transition:transform .15s" style-active="transform:scale(.985)">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.85">Conversar</span>
+<span style="font-size:19px;font-weight:700;line-height:1.2;letter-spacing:-.01em">Pratica italiano em voz alta</span>
+<span style="font-size:13px;line-height:1.4;opacity:.85;text-wrap:pretty">Situações reais, sem medo de errar.</span>
+</div>
+<div style="width:72px;height:72px;flex:none;border-radius:50%;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 26%),radial-gradient(circle at 72% 80%,rgba(34,196,245,.7),transparent 48%),radial-gradient(circle at 55% 65%,#6B93FF 0%,#2B5CF5 60%,#12297A 100%);box-shadow:0 0 0 6px rgba(255,255,255,.12),0 0 30px rgba(255,255,255,.25)"></div>
+</button>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<button onClick="{{ goTranslate }}" style="text-align:left;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--text);cursor:pointer" style-active="transform:scale(.97)">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:19px"><i class="icon-languages"></i></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:16px;font-weight:600">Tradutor</span><span style="font-size:13px;color:var(--text3)">Fala e ouve a tradução</span></div>
+</button>
+<button onClick="{{ goExplore }}" style="text-align:left;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--text);cursor:pointer" style-active="transform:scale(.97)">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:19px"><i class="icon-compass"></i></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:16px;font-weight:600">Explorar</span><span style="font-size:13px;color:var(--text3)">Guias para Milão</span></div>
+</button>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Ações rápidas</h2>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<button onClick="{{ openEmergency }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border:none;background:none;color:var(--text);cursor:pointer;border-radius:14px" style-active="background:var(--primary-soft)"><span style="width:52px;height:52px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;font-size:20px;color:var(--danger)"><i class="icon-phone"></i></span><span style="font-size:12px;font-weight:500">Emergência</span></button>
+<button onClick="{{ goTransport }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border:none;background:none;color:var(--text);cursor:pointer;border-radius:14px" style-active="background:var(--primary-soft)"><span style="width:52px;height:52px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;font-size:20px;color:var(--primary)"><i class="icon-train-front"></i></span><span style="font-size:12px;font-weight:500">Transportes</span></button>
+<button onClick="{{ goTranslate }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border:none;background:none;color:var(--text);cursor:pointer;border-radius:14px" style-active="background:var(--primary-soft)"><span style="width:52px;height:52px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;font-size:20px;color:var(--primary)"><i class="icon-message-square-text"></i></span><span style="font-size:12px;font-weight:500">Frases</span></button>
+<button onClick="{{ goDocs }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border:none;background:none;color:var(--text);cursor:pointer;border-radius:14px" style-active="background:var(--primary-soft)"><span style="width:52px;height:52px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;font-size:20px;color:var(--primary)"><i class="icon-file-text"></i></span><span style="font-size:12px;font-weight:500">Documentos</span></button>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<h2 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Esta semana em Milão</h2>
+<button onClick="{{ goExplore }}" style="border:none;background:none;color:var(--primary);font-size:14px;font-weight:600;padding:10px 4px;cursor:pointer">Ver tudo</button>
+</div>
+<div style="background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);overflow:hidden">
+<button onClick="{{ openEsn }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer" style-active="background:var(--primary-soft)">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:18px"><i class="icon-calendar"></i></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Aperitivo ESN</span><span style="font-size:13px;color:var(--text3)">Qui, 19:00 · Navigli</span></div>
+<i class="icon-chevron-right" style="color:var(--text3);font-size:18px"></i>
+</button>
+<div style="height:1px;background:var(--border);margin:0 16px"></div>
+<button onClick="{{ openFiscal }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:none;background:none;color:var(--text);text-align:left;cursor:pointer" style-active="background:var(--primary-soft)">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:18px"><i class="icon-file-text"></i></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Codice fiscale</span><span style="font-size:13px;color:var(--text3)">Prazo em 3 dias · checklist pronta</span></div>
+<i class="icon-chevron-right" style="color:var(--text3);font-size:18px"></i>
+</button>
+</div>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTranslate }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:60px 20px 108px;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:14px;animation:ehFade .28s ease both;min-height:100%">
+<header style="display:flex;flex-direction:column;gap:4px;padding-top:6px">
+<h1 style="margin:0;font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.025em">Tradutor</h1>
+<span style="font-size:14px;color:var(--text3)">Fala naturalmente. Nós tratamos do resto.</span>
+</header>
+
+<div style="display:flex;align-items:center;gap:8px;padding:6px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)">
+<button onClick="{{ openSrc }}" aria-label="Idioma de origem" style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:6px;padding:0 8px;border:none;border-radius:12px;background:none;color:var(--text);cursor:pointer" style-hover="background:var(--primary-soft)">
+<span style="font:500 11px 'JetBrains Mono',monospace;padding:3px 5px;border-radius:6px;background:var(--primary-soft);color:var(--primary)">{{ srcCode }}</span><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ srcName }}</span><i class="icon-chevron-down" style="margin-left:auto;color:var(--text3);font-size:14px;flex:none"></i>
+</button>
+<button onClick="{{ swap }}" aria-label="Trocar idiomas" style="width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--border);background:var(--surface-solid);color:var(--primary);font-size:17px;display:grid;place-items:center;cursor:pointer;transition:transform .25s" style-active="transform:rotate(180deg)"><i class="icon-arrow-left-right"></i></button>
+<button onClick="{{ openDst }}" aria-label="Idioma de destino" style="flex:1;min-width:0;height:48px;display:flex;align-items:center;gap:6px;padding:0 8px;border:none;border-radius:12px;background:none;color:var(--text);cursor:pointer" style-hover="background:var(--primary-soft)">
+<span style="font:500 11px 'JetBrains Mono',monospace;padding:3px 5px;border-radius:6px;background:var(--primary-soft);color:var(--primary)">{{ dstCode }}</span><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dstName }}</span><i class="icon-chevron-down" style="margin-left:auto;color:var(--text3);font-size:14px;flex:none"></i>
+</button>
+</div>
+
+<div style="padding:16px;border-radius:20px;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;gap:10px;min-height:96px;box-sizing:border-box">
+<span style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Reconhecido · {{ srcName }}</span>
+<sc-if value="{{ trIdle }}"><p style="margin:0;font-size:16px;line-height:1.45;color:var(--text3)">Toca no microfone e fala em {{ srcNameLower }}.</p></sc-if>
+<sc-if value="{{ trListening }}"><div style="display:flex;align-items:center;gap:12px">{{ waveform }}<span style="font-size:14px;color:var(--text2)">A ouvir…</span></div></sc-if>
+<sc-if value="{{ trHasText }}"><p style="margin:0;font-size:17px;line-height:1.45;color:var(--text);text-wrap:pretty;animation:{{ recAnim }}">{{ recText }}</p></sc-if>
+</div>
+
+<div style="padding:16px;border-radius:20px;border:1px solid {{ resBorder }};background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-height:150px;box-sizing:border-box;transition:border-color .3s">
+<span style="font-size:12px;font-weight:600;color:var(--primary);letter-spacing:.04em;text-transform:uppercase">Tradução · {{ dstName }}</span>
+<sc-if value="{{ resEmpty }}"><p style="margin:0;font-size:16px;line-height:1.45;color:var(--text3)">A tradução aparece aqui.</p></sc-if>
+<sc-if value="{{ trTranslating }}"><div style="display:flex;flex-direction:column;gap:10px;padding-top:4px"><div style="height:16px;width:92%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out infinite"></div><div style="height:16px;width:64%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out .15s infinite"></div></div></sc-if>
+<sc-if value="{{ trDone }}">
+<p style="margin:0;font-size:22px;line-height:1.35;font-weight:600;letter-spacing:-.01em;text-wrap:pretty;animation:ehFade .3s ease both">{{ resText }}</p>
+<div style="display:inline-flex;align-self:flex-start;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(22,135,90,.10);color:var(--success);font-size:12px;font-weight:600"><i class="icon-check"></i>Corrigido: pontuação e acentos</div>
+<div style="display:flex;gap:8px;margin-top:2px">
+<button onClick="{{ listen }}" aria-pressed="{{ playing }}" style="flex:1;height:44px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer" style-active="transform:scale(.98)"><i class="{{ listenIcon }}" style="font-size:18px"></i>{{ listenLabel }}</button>
+<button onClick="{{ copy }}" aria-label="Copiar tradução" style="width:44px;height:44px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--text2);font-size:18px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.94)"><i class="icon-copy"></i></button>
+</div>
+</sc-if>
+</div>
+
+<div role="status" aria-live="polite" style="display:flex;align-items:center;gap:6px;padding:0 4px">
+<sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:6px;flex:{{ s.flex }}">
+<span style="width:7px;height:7px;border-radius:50%;flex:none;background:{{ s.dot }};transition:background .3s"></span>
+<span style="font-size:12px;white-space:nowrap;font-weight:{{ s.weight }};color:{{ s.color }};transition:color .3s">{{ s.label }}</span>
+<sc-if value="{{ s.notLast }}"><span style="flex:1;height:1px;min-width:6px;background:{{ s.line }}"></span></sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px">
+<div style="position:relative;width:80px;height:80px">
+{{ micRipple }}
+<button onClick="{{ mic }}" disabled="{{ micBusy }}" aria-label="{{ micLabel }}" style="position:relative;width:80px;height:80px;border-radius:50%;border:none;background:var(--grad);color:#fff;font-size:28px;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 8px var(--primary-soft),0 16px 30px -12px var(--primary);transition:transform .15s,opacity .2s;opacity:{{ micOpacity }}" style-active="transform:scale(.94)"><i class="{{ micIcon }}"></i></button>
+</div>
+<span style="font-size:13px;font-weight:600;color:var(--text2)">{{ micLabel }}</span>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTalk }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;padding:56px 16px 100px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;animation:ehFade .3s ease both">
+<div style="position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;background:radial-gradient(circle,var(--blob1) 0%,transparent 60%);pointer-events:none"></div>
+<div role="tablist" aria-label="Modo de conversa" style="position:relative;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border)">
+<button role="tab" aria-selected="{{ modePerson }}" onClick="{{ setPerson }}" style="height:40px;border-radius:12px;border:none;background:{{ segPBg }};box-shadow:{{ segPShadow }};color:{{ segPColor }};font-size:12.5px;font-weight:700;white-space:nowrap;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 4px;cursor:pointer;transition:background .2s,color .2s"><i class="icon-users-round" style="font-size:15px"></i>Conversar com pessoa</button>
+<button role="tab" aria-selected="{{ modeTrain }}" onClick="{{ setTrain }}" style="height:40px;border-radius:12px;border:none;background:{{ segTBg }};box-shadow:{{ segTShadow }};color:{{ segTColor }};font-size:12.5px;font-weight:700;white-space:nowrap;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 4px;cursor:pointer;transition:background .2s,color .2s"><i class="icon-sparkles" style="font-size:15px"></i>Treinar com a app</button>
+</div>
+
+<sc-if value="{{ modePerson }}">
+<div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;animation:ehFade .28s ease both">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid {{ pB.border }};box-shadow:var(--shadow);transform:rotate(180deg);transition:border-color .3s">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:32px;height:32px;border-radius:50%;background:rgba(34,196,245,.16);color:#0B87B8;display:grid;place-items:center;font-size:16px;flex:none"><i class="icon-user-round"></i></span>
+<span style="font-size:15px;font-weight:700">{{ pB.you }}</span>
+<button onClick="{{ pB.onLang }}" aria-label="{{ pB.langAria }}" style="margin-left:auto;height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 6px;border-radius:999px;border:1px solid var(--border);background:var(--surface-solid);color:var(--text);font-size:13px;font-weight:600;cursor:pointer"><span style="font:500 11px 'JetBrains Mono',monospace;padding:3px 5px;border-radius:6px;background:var(--primary-soft);color:var(--primary)">{{ pB.code }}</span>{{ pB.langName }}<i class="icon-chevron-down" style="font-size:13px;color:var(--text3)"></i></button>
+</div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:6px;overflow:hidden">
+<sc-if value="{{ pB.isHint }}"><p style="margin:0;font-size:15px;line-height:1.45;color:var(--text3);text-wrap:pretty">{{ pB.text }}</p></sc-if>
+<sc-if value="{{ pB.isLive }}"><div style="display:flex;align-items:center;gap:12px">{{ waveform }}<span style="font-size:14px;color:var(--text2)">{{ pB.caption }}</span></div></sc-if>
+<sc-if value="{{ pB.isSkel }}"><span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--primary)">{{ pB.caption }}</span><div style="height:15px;width:90%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out infinite"></div><div style="height:15px;width:60%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out .15s infinite"></div></sc-if>
+<sc-if value="{{ pB.isText }}"><span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{{ pB.capColor }}">{{ pB.caption }}</span><p style="margin:0;font-size:{{ pB.size }};line-height:1.35;font-weight:{{ pB.weight }};color:{{ pB.color }};text-wrap:pretty;animation:ehFade .3s ease both">{{ pB.text }}</p></sc-if>
+</div>
+<div style="display:flex;gap:8px">
+<sc-if value="{{ pB.canReplay }}"><button onClick="{{ pB.onReplay }}" aria-label="{{ pB.replayAria }}" style="width:52px;height:52px;flex:none;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:19px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.95)"><i class="icon-volume-2"></i></button></sc-if>
+<button onClick="{{ pB.onMic }}" disabled="{{ pB.micDisabled }}" style="flex:1;height:52px;border-radius:14px;border:none;background:var(--grad);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;opacity:{{ pB.micOpacity }};box-shadow:0 12px 24px -12px var(--primary);transition:opacity .2s" style-active="transform:scale(.98)"><i class="{{ pB.micIcon }}" style="font-size:18px"></i>{{ pB.micLabel }}</button>
+</div>
+</div>
+<div style="flex:none;height:170px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px">
+<div style="justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+<span style="font:500 12px 'JetBrains Mono',monospace;padding:5px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text2);white-space:nowrap">{{ bridgeChip }}</span>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<i class="{{ flowIcon }}" aria-hidden="true" style="font-size:18px;color:var(--primary);opacity:{{ flowOpacity }};animation:{{ flowAnim }};transition:opacity .3s"></i>
+<dc-import name="Conversation Sphere" variant="anel" state="{{ bridgeState }}" size="104" hint-size="104px,104px"></dc-import>
+<i class="{{ flowIcon }}" aria-hidden="true" style="font-size:18px;color:var(--primary);opacity:{{ flowOpacity }};animation:{{ flowAnim2 }};transition:opacity .3s"></i>
+</div>
+<span role="status" style="justify-self:start;font-size:13px;line-height:1.35;font-weight:600;color:var(--text2);text-wrap:pretty">{{ bridgeText }}</span>
+</div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid {{ pA.border }};box-shadow:var(--shadow);transform:rotate(0deg);transition:border-color .3s">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:32px;height:32px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:16px;flex:none"><i class="icon-user-round"></i></span>
+<span style="font-size:15px;font-weight:700">{{ pA.you }}</span>
+<button onClick="{{ pA.onLang }}" aria-label="{{ pA.langAria }}" style="margin-left:auto;height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 6px;border-radius:999px;border:1px solid var(--border);background:var(--surface-solid);color:var(--text);font-size:13px;font-weight:600;cursor:pointer"><span style="font:500 11px 'JetBrains Mono',monospace;padding:3px 5px;border-radius:6px;background:var(--primary-soft);color:var(--primary)">{{ pA.code }}</span>{{ pA.langName }}<i class="icon-chevron-down" style="font-size:13px;color:var(--text3)"></i></button>
+</div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:6px;overflow:hidden">
+<sc-if value="{{ pA.isHint }}"><p style="margin:0;font-size:15px;line-height:1.45;color:var(--text3);text-wrap:pretty">{{ pA.text }}</p></sc-if>
+<sc-if value="{{ pA.isLive }}"><div style="display:flex;align-items:center;gap:12px">{{ waveform }}<span style="font-size:14px;color:var(--text2)">{{ pA.caption }}</span></div></sc-if>
+<sc-if value="{{ pA.isSkel }}"><span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--primary)">{{ pA.caption }}</span><div style="height:15px;width:90%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out infinite"></div><div style="height:15px;width:60%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s ease-in-out .15s infinite"></div></sc-if>
+<sc-if value="{{ pA.isText }}"><span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{{ pA.capColor }}">{{ pA.caption }}</span><p style="margin:0;font-size:{{ pA.size }};line-height:1.35;font-weight:{{ pA.weight }};color:{{ pA.color }};text-wrap:pretty;animation:ehFade .3s ease both">{{ pA.text }}</p></sc-if>
+</div>
+<div style="display:flex;gap:8px">
+<sc-if value="{{ pA.canReplay }}"><button onClick="{{ pA.onReplay }}" aria-label="{{ pA.replayAria }}" style="width:52px;height:52px;flex:none;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:19px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.95)"><i class="icon-volume-2"></i></button></sc-if>
+<button onClick="{{ pA.onMic }}" disabled="{{ pA.micDisabled }}" style="flex:1;height:52px;border-radius:14px;border:none;background:var(--grad);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;opacity:{{ pA.micOpacity }};box-shadow:0 12px 24px -12px var(--primary);transition:opacity .2s" style-active="transform:scale(.98)"><i class="{{ pA.micIcon }}" style="font-size:18px"></i>{{ pA.micLabel }}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ modeTrain }}">
+<div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;animation:ehFade .28s ease both">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700">Treino no café</span><span style="font-size:13px;color:var(--text3)">Tu e a app · Italiano B1</span></div>
+<button onClick="{{ talkTip }}" aria-label="Mudar cenário" style="height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--text);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer"><i class="icon-sparkles" style="color:var(--primary)"></i>Cenário</button>
+</div>
+<div aria-live="polite" style="position:relative;display:flex;flex-direction:column;gap:10px;margin-top:14px;min-height:150px;justify-content:flex-end">
+<sc-for list="{{ history }}" as="h" hint-placeholder-count="1">
+<div style="align-self:{{ h.align }};max-width:84%;padding:10px 14px;border-radius:16px;background:{{ h.bg }};color:{{ h.color }};border:1px solid var(--border);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);opacity:{{ h.opacity }};display:flex;flex-direction:column;gap:3px;animation:ehFade .3s ease both;transition:opacity .3s">
+<span style="font-size:15px;line-height:1.4;font-weight:500">{{ h.text }}</span>
+<sc-if value="{{ h.hasTr }}"><span style="font-size:12px;line-height:1.35;color:var(--text3)">{{ h.tr }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding-top:20px">
+<button onClick="{{ tapSphere }}" aria-label="{{ sphereLabel }}" style="border:none;background:none;padding:0;cursor:pointer;border-radius:50%;transition:transform .2s" style-active="transform:scale(.96)"><dc-import name="Conversation Sphere" variant="{{ sphereVariant }}" state="{{ conv }}" size="196" hint-size="196px,196px"></dc-import></button>
+<div role="status" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:40px">
+<span style="font-size:16px;font-weight:600;color:{{ sphereTextColor }};display:flex;align-items:center;gap:6px"><sc-if value="{{ convError }}"><i class="icon-circle-alert"></i></sc-if>{{ sphereStatus }}</span>
+<span style="font-size:13px;color:var(--text3)">{{ sphereHint }}</span>
+</div>
+</div>
+
+<div style="position:relative;display:flex;justify-content:center;gap:20px;padding-top:8px">
+<button onClick="{{ toggleMute }}" aria-label="{{ muteLabel }}" aria-pressed="{{ muted }}" style="width:52px;height:52px;border-radius:50%;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.94)"><i class="{{ muteIcon }}"></i></button>
+<button onClick="{{ keyboardTap }}" aria-label="Escrever mensagem" style="width:52px;height:52px;border-radius:50%;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.94)"><i class="icon-keyboard"></i></button>
+<button onClick="{{ resetTrain }}" aria-label="Recomeçar treino" style="width:52px;height:52px;border-radius:50%;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer" style-active="transform:scale(.94)"><i class="icon-rotate-ccw"></i></button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:60px 20px 116px;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:16px;animation:ehFade .28s ease both">
+<header style="display:flex;flex-direction:column;gap:4px;padding-top:6px">
+<h1 style="margin:0;font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.025em">Explorar</h1>
+<span style="font-size:14px;color:var(--text3)">O essencial para viver em Milão.</span>
+</header>
+<label style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:13px;font-weight:600;color:var(--text2)">Pesquisar</span>
+<div style="position:relative">
+<i class="icon-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:18px;pointer-events:none;z-index:1"></i>
+<input value="{{ q }}" onChange="{{ onQ }}" placeholder="Transportes, documentos, comida…" style="width:100%;height:50px;box-sizing:border-box;padding:0 44px 0 42px;border-radius:14px;border:1px solid var(--border-strong);background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--text);font:500 15px Manrope,sans-serif;outline:none;transition:border-color .2s,box-shadow .2s" style-focus="border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)">
+<sc-if value="{{ hasQ }}"><button onClick="{{ clearQ }}" aria-label="Limpar pesquisa" style="position:absolute;right:4px;top:3px;width:44px;height:44px;border:none;background:none;color:var(--text3);font-size:16px;display:grid;place-items:center;cursor:pointer"><i class="icon-x"></i></button></sc-if>
+</div>
+</label>
+<div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:2px 20px 4px;flex:none">
+<sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+<button onClick="{{ c.onClick }}" aria-pressed="{{ c.active }}" style="flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-size:13px;font-weight:600;cursor:pointer;transition:background .2s,color .2s">{{ c.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ loadingExp }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ skel }}" as="k" hint-placeholder-count="4">
+<div style="display:flex;gap:12px;padding:12px;border-radius:20px;border:1px solid var(--border);background:var(--surface)"><div style="width:64px;height:64px;border-radius:14px;background:var(--skel);animation:ehShimmer 1.1s infinite"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center"><div style="height:14px;width:60%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s infinite"></div><div style="height:12px;width:85%;border-radius:6px;background:var(--skel);animation:ehShimmer 1.1s infinite"></div></div></div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ showResults }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ places }}" as="p" hint-placeholder-count="4">
+<button onClick="{{ p.onClick }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow);color:var(--text);text-align:left;cursor:pointer;animation:ehFade .3s ease both" style-active="transform:scale(.985)">
+<div style="width:64px;height:64px;flex:none;border-radius:14px;background:repeating-linear-gradient(135deg,var(--skel) 0 6px,transparent 6px 12px);border:1px solid var(--border);display:grid;place-items:center;font:500 9px 'JetBrains Mono',monospace;color:var(--text3)">foto</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+<span style="font-size:11px;font-weight:600;color:var(--primary);letter-spacing:.04em;text-transform:uppercase">{{ p.c }}</span>
+<span style="font-size:15px;font-weight:600">{{ p.t }}</span>
+<span style="font-size:13px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.m }}</span>
+</div>
+<i class="icon-chevron-right" style="color:var(--text3);font-size:18px"></i>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ noResults }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px 20px;text-align:center">
+<div style="width:52px;height:52px;border-radius:16px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:22px"><i class="icon-search"></i></div>
+<span style="font-size:16px;font-weight:600">Sem resultados</span>
+<span style="font-size:14px;color:var(--text3);text-wrap:pretty">Tenta outra palavra ou escolhe “Tudo”.</span>
+<button onClick="{{ resetExplore }}" style="margin-top:4px;height:44px;padding:0 18px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer">Limpar filtros</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:60px 20px 116px;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:22px;animation:ehFade .28s ease both">
+<h1 style="margin:0;padding-top:6px;font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.025em">Perfil</h1>
+<div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow)">
+<div style="width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:700;flex:none">MS</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+<span style="font-size:17px;font-weight:700">Marta Silva</span>
+<span style="font-size:13px;color:var(--text3)">U. Porto → Politecnico di Milano</span>
+<span style="font-size:13px;color:var(--text3)">Erasmus 2026/27 · set – fev</span>
+</div>
+</div>
+<section style="display:flex;flex-direction:column;gap:8px">
+<h2 style="margin:0 4px;font-size:13px;font-weight:600;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Preferências</h2>
+<div style="background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+<button onClick="{{ toggleDark }}" role="switch" aria-checked="{{ dark }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left">
+<i class="{{ themeIcon }}" style="font-size:19px;color:var(--text2)"></i><span style="flex:1;font-size:15px;font-weight:500">Modo escuro</span>
+<span style="width:48px;height:28px;border-radius:999px;background:{{ darkTrack }};position:relative;transition:background .2s"><span style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transform:translateX({{ darkKnob }});transition:transform .2s"></span></span>
+</button>
+<div style="height:1px;background:var(--border);margin:0 16px"></div>
+<button onClick="{{ toggleNotif }}" role="switch" aria-checked="{{ notif }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left">
+<i class="icon-bell" style="font-size:19px;color:var(--text2)"></i><span style="flex:1;font-size:15px;font-weight:500">Notificações</span>
+<span style="width:48px;height:28px;border-radius:999px;background:{{ notifTrack }};position:relative;transition:background .2s"><span style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transform:translateX({{ notifKnob }});transition:transform .2s"></span></span>
+</button>
+<div style="height:1px;background:var(--border);margin:0 16px"></div>
+<button onClick="{{ openSrc }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left">
+<i class="icon-globe" style="font-size:19px;color:var(--text2)"></i><span style="flex:1;font-size:15px;font-weight:500">Idioma nativo</span><span style="font-size:14px;color:var(--text3)">{{ srcName }}</span><i class="icon-chevron-right" style="color:var(--text3)"></i>
+</button>
+<div style="height:1px;background:var(--border);margin:0 16px"></div>
+<button onClick="{{ openDst }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left">
+<i class="icon-graduation-cap" style="font-size:19px;color:var(--text2)"></i><span style="flex:1;font-size:15px;font-weight:500">A aprender</span><span style="font-size:14px;color:var(--text3)">{{ dstName }}</span><i class="icon-chevron-right" style="color:var(--text3)"></i>
+</button>
+</div>
+</section>
+<section style="display:flex;flex-direction:column;gap:8px">
+<h2 style="margin:0 4px;font-size:13px;font-weight:600;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Conta</h2>
+<div style="background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+<button onClick="{{ privacyTap }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left"><i class="icon-shield-check" style="font-size:19px;color:var(--text2)"></i><span style="flex:1;font-size:15px;font-weight:500">Privacidade e dados</span><i class="icon-chevron-right" style="color:var(--text3)"></i></button>
+<div style="height:1px;background:var(--border);margin:0 16px"></div>
+<button onClick="{{ openAbout }}" style="width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border:none;background:none;color:var(--text);cursor:pointer;text-align:left"><img src="assets/eh-mark.png" alt="" style="width:19px"><span style="flex:1;font-size:15px;font-weight:500">Sobre a Erasmus Help</span><i class="icon-chevron-right" style="color:var(--text3)"></i></button>
+</div>
+</section>
+<button onClick="{{ logoutTap }}" style="height:48px;border-radius:14px;border:none;background:transparent;color:var(--danger);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer" style-hover="background:rgba(200,50,47,.08)"><i class="icon-log-out"></i>Terminar sessão</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Navegação principal" style="position:absolute;left:0;right:0;bottom:0;height:88px;padding:6px 8px 22px;box-sizing:border-box;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;background:var(--nav);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border-top:1px solid var(--border);z-index:20">
+<sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+<sc-if value="{{ n.center }}">
+<button onClick="{{ n.onClick }}" aria-label="{{ n.label }}" aria-current="{{ n.current }}" style="justify-self:center;width:52px;height:52px;border-radius:50%;border:none;background:var(--grad);color:#fff;font-size:22px;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 {{ n.ring }} var(--primary-soft),0 10px 22px -10px var(--primary);transition:box-shadow .25s,transform .15s" style-active="transform:scale(.93)"><i class="{{ n.icon }}"></i></button>
+</sc-if>
+<sc-if value="{{ n.side }}">
+<button onClick="{{ n.onClick }}" aria-current="{{ n.current }}" style="height:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ n.color }};cursor:pointer;transition:color .2s" style-active="transform:scale(.94)"><i class="{{ n.icon }}" style="font-size:21px"></i><span style="font-size:11px;font-weight:{{ n.weight }}">{{ n.label }}</span></button>
+</sc-if>
+</sc-for>
+</nav>
+</sc-if>
+<div style="position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--text);opacity:.85;z-index:21;pointer-events:none"></div>
+
+<sc-if value="{{ hasToast }}">
+<div role="status" style="position:absolute;left:50%;bottom:104px;transform:translateX(-50%);z-index:40;padding:11px 16px;border-radius:14px;background:var(--text);color:var(--bg);font-size:14px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);animation:ehFade .2s ease both"><i class="icon-check"></i>{{ toast }}</div>
+</sc-if>
+
+<sc-if value="{{ hasSheet }}">
+<div style="position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(6,9,20,.42);animation:ehBackdrop .2s ease both"></div>
+<div role="dialog" aria-modal="true" aria-label="{{ sheetTitle }}" style="position:relative;background:var(--surface-solid);border-radius:24px 24px 0 0;padding:10px 20px 34px;display:flex;flex-direction:column;gap:14px;animation:ehSheet .28s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 -10px 40px -10px rgba(0,0,0,.25)">
+<div style="width:40px;height:5px;border-radius:3px;background:var(--border-strong);align-self:center"></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<h3 style="margin:0;font-size:18px;font-weight:700">{{ sheetTitle }}</h3>
+<button onClick="{{ closeSheet }}" aria-label="Fechar" style="width:44px;height:44px;margin-right:-10px;border:none;background:none;color:var(--text2);font-size:20px;display:grid;place-items:center;cursor:pointer;border-radius:50%" style-hover="background:var(--primary-soft)"><i class="icon-x"></i></button>
+</div>
+<sc-if value="{{ isLangSheet }}">
+<div style="display:flex;flex-direction:column;gap:2px;margin:0 -8px">
+<sc-for list="{{ langs }}" as="l" hint-placeholder-count="7">
+<button onClick="{{ l.onClick }}" style="height:52px;display:flex;align-items:center;gap:12px;padding:0 10px;border:none;border-radius:12px;background:{{ l.bg }};color:var(--text);cursor:pointer;text-align:left" style-hover="background:var(--primary-soft)">
+<span style="font:500 11px 'JetBrains Mono',monospace;padding:3px 5px;border-radius:6px;background:var(--primary-soft);color:var(--primary)">{{ l.code }}</span><span style="flex:1;font-size:15px;font-weight:{{ l.weight }}">{{ l.name }}</span><sc-if value="{{ l.sel }}"><i class="icon-check" style="color:var(--primary);font-size:18px"></i></sc-if>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ isDetailSheet }}">
+<div style="height:140px;border-radius:16px;background:repeating-linear-gradient(135deg,var(--skel) 0 8px,transparent 8px 16px);border:1px solid var(--border);display:grid;place-items:center;font:500 11px 'JetBrains Mono',monospace;color:var(--text3)">foto do local</div>
+<span style="font-size:13px;color:var(--text3)">{{ detailMeta }}</span>
+<p style="margin:0;font-size:15px;line-height:1.5;color:var(--text2);text-wrap:pretty">{{ detailDesc }}</p>
+<div style="display:flex;gap:10px;margin-top:4px">
+<button onClick="{{ closeSheet }}" style="flex:1;height:52px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer">Fechar</button>
+<button onClick="{{ saveDetail }}" style="flex:1.4;height:52px;border-radius:14px;border:none;background:var(--grad);color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 10px 22px -12px var(--primary);display:flex;align-items:center;justify-content:center;gap:8px" style-hover="filter:brightness(1.06)" style-active="transform:scale(.98)"><i class="icon-bookmark"></i>Guardar</button>
+</div>
+</sc-if>
+<sc-if value="{{ isEmergencySheet }}">
+<p style="margin:0;font-size:15px;line-height:1.5;color:var(--text2);text-wrap:pretty">O 112 é o número europeu de emergência. Gratuito, funciona em toda a UE e atende em inglês.</p>
+<button onClick="{{ call112 }}" style="height:52px;border-radius:14px;border:none;background:var(--danger);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer" style-active="transform:scale(.98)"><i class="icon-phone"></i>Ligar 112</button>
+<button onClick="{{ callUni }}" style="height:52px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer">Gabinete Erasmus do Politecnico</button>
+</sc-if>
+<sc-if value="{{ isAboutSheet }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 4px"><img src="assets/eh-mark.png" alt="Erasmus Help" style="width:64px"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Erasmus <span style="color:var(--primary)">Help</span></span><span style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--text3)">Apoio a estudantes Erasmus</span><span style="font-size:13px;color:var(--text3)">Versão 1.0 · protótipo</span></div>
+<button onClick="{{ replayOb }}" style="height:52px;border-radius:14px;border:1px solid var(--border-strong);background:transparent;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer">Rever introdução</button>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+
+<p style="margin:0;max-width:390px;text-align:center;font-size:13px;line-height:1.5;color:var(--text3)">Experimenta: toca no microfone do Tradutor e na esfera de Conversar. O modo escuro está no Perfil.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tema&quot;},&quot;sphereVariant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;vidro&quot;,&quot;anel&quot;,&quot;aurora&quot;],&quot;default&quot;:&quot;vidro&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conversar&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;splash&quot;,&quot;onboarding&quot;,&quot;home&quot;,&quot;translate&quot;,&quot;talk&quot;,&quot;explore&quot;,&quot;profile&quot;],&quot;default&quot;:&quot;splash&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Protótipo&quot;},&quot;simulateError&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Protótipo&quot;}}">
+const LANGS = [['pt','Português'],['it','Italiano'],['en','Inglês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['pl','Polaco']];
+const PHRASE = {pt:'Olá, onde fica a estação de comboios mais próxima?', it:"Ciao, dov'è la stazione dei treni più vicina?", en:'Hi, where is the nearest train station?', es:'Hola, ¿dónde está la estación de tren más cercana?', fr:'Bonjour, où est la gare la plus proche ?', de:'Hallo, wo ist der nächste Bahnhof?', pl:'Cześć, gdzie jest najbliższy dworzec kolejowy?'};
+const TURNS = [
+  {you:'Vorrei un cappuccino, per favore.', ai:'Certo! Al banco o al tavolo?', tr:'Claro! Ao balcão ou à mesa?'},
+  {you:'Al banco, grazie.', ai:'Perfetto. Sono un euro e cinquanta.', tr:'Perfeito. São um euro e cinquenta.'},
+  {you:'Posso pagare con la carta?', ai:'Sì, nessun problema. Buona giornata!', tr:'Sim, sem problema. Bom dia!'}
+];
+const PLACES = [
+  {t:'Codice Fiscale', c:'Burocracia', m:'Agenzia delle Entrate · 15 min', d:'O número fiscal italiano. Vais precisar dele para o contrato de casa, o telemóvel e o passe. Leva passaporte ou CC e a carta de aceitação.'},
+  {t:'Passe ATM Under 27', c:'Transportes', m:'€22/mês · metro, tram e autocarro', d:'Passe mensal para menores de 27 anos em toda a rede urbana de Milão. Pede-o na app ATM ou num ATM Point.'},
+  {t:'Mensa Politecnico', c:'Comida', m:'Refeição completa a €4,50', d:'Cantina universitária no campus Leonardo. Paga com o cartão de estudante.'},
+  {t:'Aperitivo ESN', c:'Eventos', m:'Qui, 19:00 · Navigli', d:'Encontro semanal da ESN Politecnico. Ideal para conhecer outros estudantes Erasmus.'},
+  {t:'Residenza anagrafica', c:'Burocracia', m:'Comune di Milano · opcional', d:'Registo de residência para estadias longas. Útil para abrir conta bancária local.'},
+  {t:'BikeMi', c:'Transportes', m:'Estações em toda a cidade', d:'Bicicletas partilhadas, clássicas e elétricas. Assinatura anual com desconto para estudantes.'},
+  {t:'Mercato di Viale Papiniano', c:'Comida', m:'Ter e Sáb · manhã', d:'Mercado de rua com fruta, legumes e queijo a bons preços.'}
+];
+const P_LANGS = ['pt','es','it','en'];
+const A_LINES = [
+  {pt:'Olá! Também estás de Erasmus aqui?', es:'¡Hola! ¿Tú también estás de Erasmus aquí?', it:'Ciao! Anche tu sei qui in Erasmus?', en:'Hi! Are you here on Erasmus too?'},
+  {pt:'Queres ir ao aperitivo da ESN na quinta?', es:'¿Quieres ir al aperitivo de ESN el jueves?', it:"Vuoi venire all'aperitivo ESN giovedì?", en:'Do you want to go to the ESN aperitivo on Thursday?'}
+];
+const B_LINES = [
+  {pt:'Sim, sou de Valência. Estou em Milão há duas semanas.', es:'Sí, soy de Valencia. Llevo dos semanas en Milán.', it:'Sì, sono di Valencia. Sono a Milano da due settimane.', en:"Yes, I'm from Valencia. I've been in Milan for two weeks."},
+  {pt:'Claro! Encontramo-nos nos Navigli?', es:'¡Claro! ¿Nos vemos en Navigli?', it:'Certo! Ci vediamo ai Navigli?', en:'Sure! Shall we meet at Navigli?'}
+];
+const NAMES = {pt:{pt:'português',es:'espanhol',it:'italiano',en:'inglês'}, es:{pt:'portugués',es:'español',it:'italiano',en:'inglés'}, it:{pt:'portoghese',es:'spagnolo',it:'italiano',en:'inglese'}, en:{pt:'Portuguese',es:'Spanish',it:'Italian',en:'English'}};
+const UI = {
+  pt:{you:'Tu', speak:'Falar', stop:'Parar', hint:'Toca em Falar e fala em português.', listening:'A ouvir…', translating:'A traduzir…', from:'Traduzido do', said:'Disseste', lang:'Mudar idioma', replay:'Ouvir de novo'},
+  es:{you:'Tú', speak:'Hablar', stop:'Parar', hint:'Toca Hablar y habla en español.', listening:'Escuchando…', translating:'Traduciendo…', from:'Traducido del', said:'Dijiste', lang:'Cambiar idioma', replay:'Escuchar otra vez'},
+  it:{you:'Tu', speak:'Parla', stop:'Stop', hint:'Tocca Parla e parla in italiano.', listening:'Ascolto…', translating:'Traduzione…', from:"Tradotto dall'", said:'Hai detto', lang:'Cambia lingua', replay:'Riascolta'},
+  en:{you:'You', speak:'Speak', stop:'Stop', hint:'Tap Speak and talk in English.', listening:'Listening…', translating:'Translating…', from:'Translated from', said:'You said', lang:'Change language', replay:'Play again'}
+};
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const CATS = ['Tudo','Burocracia','Transportes','Comida','Eventos'];
+const DARK = {'--page':'#05070D','--bg':'#0A0D16','--surface':'rgba(255,255,255,.055)','--surface-solid':'#141826','--border':'rgba(255,255,255,.09)','--border-strong':'rgba(255,255,255,.18)','--text':'#EEF0F6','--text2':'#B3B9C9','--text3':'#838B9E','--primary':'#4C7BFF','--primary-soft':'rgba(76,123,255,.16)','--accent':'#3CCFFA','--grad':'linear-gradient(120deg,#3F6EFF 0%,#3F6EFF 35%,#1E8FEA 100%)','--danger':'#E0504B','--success':'#3CC48A','--nav':'rgba(14,18,30,.78)','--shadow':'0 1px 0 rgba(255,255,255,.04) inset,0 12px 30px -14px rgba(0,0,0,.6)','--blob1':'rgba(76,123,255,.24)','--blob2':'rgba(34,196,245,.10)','--skel':'rgba(255,255,255,.08)'};
+
+class Component extends DCLogic {
+  state = { screen: null, dark: null, src:'pt', dst:'it', phase:'idle', playing:false, conv:'idle', turn:0, muted:false,
+    history:[{who:'ai', text:'Ciao Marta! Oggi siamo al bar. Cosa prendi?', tr:'Olá Marta! Hoje estamos no café. O que vais tomar?'}],
+    sheet:null, detail:null, toast:null, obStep:0, mode:'person', pa:'pt', pb:'es', pState:'idle', pSp:null, pShown:null, aTurn:0, bTurn:0, cat:'Tudo', q:'', loadingExp:false, notif:true };
+  timers = [];
+  later(fn, ms){ this.timers.push(setTimeout(fn, ms)); }
+  clear(){ this.timers.forEach(clearTimeout); this.timers = []; }
+  componentDidMount(){ if (this.screen==='splash') this.later(()=>this.setState({screen:'onboarding'}), 1900); }
+  componentWillUnmount(){ this.clear(); clearTimeout(this.toastT); }
+  showToast(msg){ clearTimeout(this.toastT); this.setState({toast:msg}); this.toastT = setTimeout(()=>this.setState({toast:null}), 1900); }
+  get screen(){ return this.state.screen ?? this.props.startScreen ?? 'splash'; }
+  get dark(){ return this.state.dark ?? !!this.props.dark; }
+  go(s, extra){
+    this.clear();
+    const patch = {screen:s, conv:'idle', playing:false, sheet:null, pState:'idle', ...extra};
+    if (this.state.phase !== 'done') patch.phase = 'idle';
+    if (s === 'explore') { patch.loadingExp = true; this.later(()=>this.setState({loadingExp:false}), 700); }
+    this.setState(patch);
+  }
+  mic(){
+    const p = this.state.phase;
+    if (p === 'processing' || p === 'translating') return;
+    if (p === 'listening') return this.stopRec();
+    this.clear(); this.setState({phase:'listening', playing:false});
+    this.later(()=>this.stopRec(), 3200);
+  }
+  stopRec(){
+    this.clear(); this.setState({phase:'processing'});
+    this.later(()=>this.setState({phase:'translating'}), 900);
+    this.later(()=>this.setState({phase:'done'}), 1900);
+  }
+  pTalk(x){
+    const s = this.state;
+    if (s.pState==='listening' && s.pSp===x) return this.pStop();
+    if (s.pState!=='idle') return;
+    this.clear(); this.setState({pState:'listening', pSp:x});
+    this.later(()=>this.pStop(), 2600);
+  }
+  pStop(){
+    const x = this.state.pSp, idx = x==='a' ? this.state.aTurn : this.state.bTurn;
+    this.clear(); this.setState({pState:'processing', pShown:{sp:x, idx}});
+    this.later(()=>this.setState({pState:'speaking'}), 1100);
+    this.later(()=>this.setState({pState:'idle', [x+'Turn']:(idx+1)%A_LINES.length}), 3700);
+  }
+  panel(x){
+    const st = this.state, o = x==='a'?'b':'a', lang = st['p'+x], olang = st['p'+o], U = UI[lang], ps = st.pState, sh = st.pShown;
+    const live = ps==='listening' && st.pSp===x;
+    const line = sh ? (sh.sp==='a'?A_LINES:B_LINES)[sh.idx] : null;
+    let mode = 'hint', text = U.hint, caption = '';
+    if (live) { mode='live'; caption=U.listening; }
+    else if (sh && sh.sp===x) { mode='said'; caption=U.said; text=line[lang]; }
+    else if (sh && sh.sp===o) {
+      if (ps==='processing' && st.pSp===o) { mode='skel'; caption=U.translating; }
+      else { mode='tr'; caption=U.from+' '+NAMES[lang][olang]; text=line[lang]; }
+    }
+    const busy = ps!=='idle' && !live;
+    const hot = live || (mode==='tr' && ps==='speaking');
+    return { you:U.you, code:lang.toUpperCase(), langName:cap(NAMES[lang][lang]), langAria:U.lang, replayAria:U.replay,
+      isHint:mode==='hint', isLive:mode==='live', isSkel:mode==='skel', isText:mode==='said'||mode==='tr',
+      text, caption, capColor:mode==='tr'?'var(--primary)':'var(--text3)', size:mode==='tr'?'20px':'16px', weight:mode==='tr'?600:500, color:mode==='tr'?'var(--text)':'var(--text2)',
+      border:hot?'var(--primary)':'var(--border)',
+      canReplay:mode==='tr' && ps==='idle',
+      onReplay:()=>{ this.clear(); this.setState({pState:'speaking', pSp:o}); this.later(()=>this.setState({pState:'idle'}), 2200); },
+      micLabel:live?U.stop:U.speak, micIcon:live?'icon-square':'icon-mic', micDisabled:busy, micOpacity:busy?.45:1,
+      onMic:()=>this.pTalk(x), onLang:()=>this.setState({sheet:'p'+x}) };
+  }
+  pushH(item){ this.setState(s=>({history:[...s.history, item].slice(-3)})); }
+  tapSphere(){
+    const c = this.state.conv, t = TURNS[this.state.turn];
+    if (this.state.muted) return this.showToast('Microfone desativado');
+    const process = () => {
+      this.clear(); this.setState({conv:'processing'});
+      this.later(()=>{
+        if (this.props.simulateError) return this.setState({conv:'error'});
+        this.pushH({who:'you', text:t.you});
+        this.later(()=>{ this.setState({conv:'speaking'}); this.pushH({who:'ai', text:t.ai, tr:t.tr}); }, 350);
+        this.later(()=>this.setState(s=>({conv:'idle', turn:(s.turn+1)%TURNS.length})), 3600);
+      }, 1300);
+    };
+    if (c === 'idle' || c === 'error') { this.clear(); this.setState({conv:'listening'}); this.later(process, 2800); }
+    else if (c === 'listening') process();
+    else if (c === 'speaking') { this.clear(); this.setState(s=>({conv:'idle', turn:(s.turn+1)%TURNS.length})); }
+  }
+  sphere(state){
+    const e = React.createElement, err = state === 'error';
+    const anim = {idle:'ehBreath 5s ease-in-out infinite', listening:'ehListen 1.5s ease-in-out infinite', processing:'ehPulse .9s ease-in-out infinite', speaking:'ehSpeak .8s ease-in-out infinite', error:'ehShake .5s ease-in-out 1'}[state];
+    const body = err
+      ? 'radial-gradient(circle at 34% 28%,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 24%),radial-gradient(circle at 55% 65%,#E88A7E 0%,#B8433C 58%,#5A1B1A 100%)'
+      : 'radial-gradient(circle at 34% 28%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 24%),radial-gradient(circle at 76% 82%,rgba(34,196,245,.75),transparent 46%),radial-gradient(circle at 55% 62%,#7FA2FF 0%,#2B5CF5 55%,#10267A 100%)';
+    const glow = err ? 'rgba(224,80,75,.35)' : 'rgba(43,92,245,.45)';
+    const kids = [
+      e('div',{key:'halo',style:{position:'absolute',inset:-50,borderRadius:'50%',background:`radial-gradient(circle,${glow} 0%,transparent 62%)`,opacity:state==='idle'?.55:1,transition:'opacity .6s',animation:state==='speaking'?'ehHalo 1.2s ease-in-out infinite':'none'}})
+    ];
+    if (state === 'listening') [0,.75].forEach((d,i)=>kids.push(e('div',{key:'r'+i,style:{position:'absolute',inset:0,borderRadius:'50%',border:'1.5px solid var(--primary)',animation:`ehRipple 1.5s ease-out ${d}s infinite`}})));
+    if (state === 'processing') kids.push(e('div',{key:'spin',style:{position:'absolute',inset:-12,borderRadius:'50%',background:'conic-gradient(from 0deg,transparent 0 55%,var(--primary) 78%,var(--accent) 92%,transparent)',WebkitMask:'radial-gradient(circle,transparent 66%,#000 67%)',mask:'radial-gradient(circle,transparent 66%,#000 67%)',animation:'ehSpin 1.1s linear infinite'}}));
+    kids.push(e('div',{key:'core',style:{position:'absolute',inset:0,borderRadius:'50%',background:body,boxShadow:`inset 0 -10px 30px rgba(0,0,0,.25),inset 0 2px 1px rgba(255,255,255,.35),0 20px 50px -18px ${glow}`,animation:anim,transition:'background .4s'}},
+      e('div',{style:{position:'absolute',inset:'8% 14% 50% 14%',borderRadius:'50%',background:'linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0))'}})));
+    return e('div',{style:{position:'relative',width:196,height:196}}, ...kids);
+  }
+  waveform(){
+    const e = React.createElement;
+    return e('div',{style:{display:'flex',alignItems:'center',gap:3,height:28}},
+      Array.from({length:18},(_,i)=>e('span',{key:i,style:{width:3,height:28,borderRadius:2,background:'var(--primary)',transformOrigin:'center',animation:`ehBar ${0.7+((i*37)%5)/10}s ease-in-out ${(i%6)*0.08}s infinite`}})));
+  }
+  renderVals(){
+    const st = this.state, screen = this.screen, dark = this.dark, p = st.phase;
+    const name = c => LANGS.find(l=>l[0]===c)[1];
+    const order = ['listening','processing','translating','done'], idx = order.indexOf(p);
+    const q = st.q.trim().toLowerCase();
+    const filtered = PLACES.filter(x => (st.cat==='Tudo' || x.c===st.cat) && (!q || (x.t+' '+x.c+' '+x.m).toLowerCase().includes(q)));
+    const convMap = {
+      idle:['Toca na esfera para falar','Responde em italiano'],
+      listening:['A ouvir…','Toca de novo quando terminares'],
+      processing:['A pensar…','Um momento'],
+      speaking:['A falar','Toca para interromper'],
+      error:['Não percebi bem','Toca para tentar outra vez']
+    }[st.conv];
+    const nav = [['home','Início','icon-house'],['translate','Tradutor','icon-languages'],['talk','Conversar','icon-audio-lines',true],['explore','Explorar','icon-compass'],['profile','Perfil','icon-user-round']]
+      .map(([id,label,icon,center])=>({label,icon,center:!!center,side:!center,current:screen===id?'page':undefined,
+        color:screen===id?'var(--primary)':'var(--text3)',weight:screen===id?700:500,ring:screen===id?'6px':'0px',onClick:()=>this.go(id)}));
+    const sheetLang = ['src','dst','pa','pb'].includes(st.sheet);
+    const detail = st.detail;
+    const setLang = code => () => {
+      const k = st.sheet, other = {src:'dst',dst:'src',pa:'pb',pb:'pa'}[k];
+      const patch = {[k]:code, sheet:null, phase:p==='done'?'done':p};
+      if (st[other]===code) patch[other] = st[k];
+      this.setState(patch);
+    };
+    const OB = [
+      ['Bem-vinda à Erasmus Help','Traduz, pratica e orienta-te na tua cidade Erasmus. Tudo num só lugar.'],
+      ['Fala. Nós traduzimos.','Grava a tua voz, confirma o texto reconhecido e ouve a tradução corrigida em segundos.'],
+      ['Pratica sem medo','Conversa em voz alta com a assistente em situações reais: no café, com o senhorio, na secretaria.']];
+    const ob = st.obStep;
+    return {
+      isSplash:screen==='splash', isOnboarding:screen==='onboarding', showNav:screen!=='splash'&&screen!=='onboarding',
+      skipSplash:()=>this.go('onboarding',{obStep:0}),
+      ob0:ob===0, ob1:ob===1, ob2:ob===2, obNotLast:ob<2, obTitle:OB[ob][0], obBody:OB[ob][1], obCta:ob<2?'Continuar':'Começar',
+      obProgress:'Passo '+(ob+1)+' de 3',
+      obDots:[0,1,2].map(i=>({w:i===ob?'22px':'6px', bg:i===ob?'var(--primary)':'var(--border-strong)'})),
+      nextOb:()=> ob<2 ? this.setState({obStep:ob+1}) : this.go('home'),
+      skipOb:()=>this.go('home'),
+      openAbout:()=>this.setState({sheet:'about'}), isAboutSheet:st.sheet==='about',
+      replayOb:()=>this.go('onboarding',{obStep:0}),
+      rootVars: dark ? DARK : {},
+      dark, isHome:screen==='home', isTranslate:screen==='translate', isTalk:screen==='talk', isExplore:screen==='explore', isProfile:screen==='profile',
+      goHome:()=>this.go('home'), goTranslate:()=>this.go('translate'), goTalk:()=>this.go('talk',{mode:'train'}), goExplore:()=>this.go('explore',{cat:'Tudo',q:''}),
+      goProfile:()=>this.go('profile'), goTransport:()=>this.go('explore',{cat:'Transportes',q:''}), goDocs:()=>this.go('explore',{cat:'Burocracia',q:''}),
+      notifTap:()=>this.showToast('Sem novas notificações'),
+      openEmergency:()=>this.setState({sheet:'emergency'}),
+      openEsn:()=>this.setState({sheet:'detail', detail:PLACES[3]}), openFiscal:()=>this.setState({sheet:'detail', detail:PLACES[0]}),
+      // translator
+      srcCode:st.src.toUpperCase(), dstCode:st.dst.toUpperCase(), srcName:name(st.src), dstName:name(st.dst), srcNameLower:name(st.src).toLowerCase(),
+      openSrc:()=>this.setState({sheet:'src'}), openDst:()=>this.setState({sheet:'dst'}),
+      swap:()=>this.setState(s=>({src:s.dst, dst:s.src})),
+      trIdle:p==='idle', trListening:p==='listening', trHasText:idx>=1, trTranslating:p==='translating', trDone:p==='done', resEmpty:idx<2,
+      recText:PHRASE[st.src], recAnim:p==='processing'?'ehShimmer 1s ease-in-out infinite':'ehFade .3s ease both',
+      resText:PHRASE[st.dst], resBorder:p==='done'?'var(--primary)':'var(--border)',
+      waveform:this.waveform(),
+      playing:st.playing, listenIcon:st.playing?'icon-square':'icon-volume-2', listenLabel:st.playing?'A reproduzir…':'Ouvir',
+      listen:()=>{ if(st.playing) return this.setState({playing:false}); this.setState({playing:true}); this.later(()=>this.setState({playing:false}),2400); },
+      copy:()=>this.showToast('Tradução copiada'),
+      steps:['A ouvir','A processar','A traduzir','Concluído'].map((label,i)=>({label, notLast:i<3, flex:i<3?'1':'none',
+        dot:i<=idx?'var(--primary)':'var(--border-strong)', line:i<idx?'var(--primary)':'var(--border-strong)',
+        color:i===idx?'var(--text)':i<idx?'var(--text2)':'var(--text3)', weight:i===idx?700:500})),
+      mic:()=>this.mic(), micBusy:p==='processing'||p==='translating', micOpacity:(p==='processing'||p==='translating')?.55:1,
+      micIcon:p==='listening'?'icon-square':'icon-mic',
+      micLabel:{idle:'Toca para falar',listening:'Toca para parar',processing:'A processar…',translating:'A traduzir…',done:'Falar outra vez'}[p],
+      micRipple: p==='listening' ? React.createElement(React.Fragment,null,[0,.7].map((d,i)=>React.createElement('span',{key:i,style:{position:'absolute',inset:0,borderRadius:'50%',background:'var(--primary)',animation:`ehRipple 1.4s ease-out ${d}s infinite`}}))) : null,
+      // talk
+      conv:st.conv, sphereVariant:this.props.sphereVariant ?? 'vidro', tapSphere:()=>this.tapSphere(),
+      sphereLabel:st.conv==='listening'?'Parar de ouvir':'Falar com a assistente',
+      sphereStatus:convMap[0], sphereHint:convMap[1], convError:st.conv==='error',
+      sphereTextColor:st.conv==='error'?'var(--danger)':'var(--text)',
+      history:st.history.map((h,i,a)=>({text:h.text, tr:h.tr, hasTr:!!h.tr, align:h.who==='you'?'flex-end':'flex-start',
+        bg:h.who==='you'?'var(--primary)':'var(--surface)', color:h.who==='you'?'#fff':'var(--text)', opacity:i===a.length-1?1:i===a.length-2?.7:.4})),
+      muted:st.muted, muteIcon:st.muted?'icon-mic-off':'icon-mic', muteLabel:st.muted?'Ativar microfone':'Desativar microfone',
+      toggleMute:()=>{ this.clear(); this.setState(s=>({muted:!s.muted, conv:'idle'})); },
+      keyboardTap:()=>this.showToast('Modo texto em breve'),
+      talkTip:()=>this.showToast('Cenários: café, senhorio, secretaria'),
+      resetTrain:()=>{ this.clear(); this.setState({conv:'idle', turn:0, history:[{who:'ai', text:'Ciao Marta! Oggi siamo al bar. Cosa prendi?', tr:'Olá Marta! Hoje estamos no café. O que vais tomar?'}]}); },
+      modePerson:st.mode==='person', modeTrain:st.mode==='train',
+      setPerson:()=>{ this.clear(); this.setState({mode:'person', conv:'idle', pState:'idle'}); },
+      setTrain:()=>{ this.clear(); this.setState({mode:'train', conv:'idle', pState:'idle'}); },
+      segPBg:st.mode==='person'?'var(--surface-solid)':'transparent', segTBg:st.mode==='train'?'var(--surface-solid)':'transparent',
+      segPColor:st.mode==='person'?'var(--primary)':'var(--text2)', segTColor:st.mode==='train'?'var(--primary)':'var(--text2)',
+      segPShadow:st.mode==='person'?'0 0 0 1px var(--border),0 4px 12px -4px rgba(16,24,48,.14)':'none', segTShadow:st.mode==='train'?'0 0 0 1px var(--border),0 4px 12px -4px rgba(16,24,48,.14)':'none',
+      pA:this.panel('a'), pB:this.panel('b'),
+      bridgeState:st.pState, bridgeChip:st.pa.toUpperCase()+' ⇄ '+st.pb.toUpperCase(),
+      flowIcon:st.pSp==='b'?'icon-chevron-down':'icon-chevron-up', flowOpacity:st.pState==='idle'?0:1, flowAnim:st.pState==='idle'?'none':'ehShimmer 1s ease-in-out infinite', flowAnim2:st.pState==='idle'?'none':'ehShimmer 1s ease-in-out .2s infinite',
+      bridgeText:(()=>{ const tgt = st.pSp==='a'?st.pb:st.pa; return {idle:st.pShown?'Toca em Falar do teu lado':'Pousa o telemóvel na mesa, entre os dois', listening:st.pSp==='a'?'A ouvir-te':'A ouvir a outra pessoa', processing:'A traduzir para '+NAMES.pt[tgt], speaking:'A reproduzir em '+NAMES.pt[tgt]}[st.pState]; })(),
+      // explore
+      q:st.q, hasQ:!!st.q, onQ:e=>this.setState({q:e.target.value}), clearQ:()=>this.setState({q:''}),
+      resetExplore:()=>this.setState({q:'',cat:'Tudo'}),
+      chips:CATS.map(c=>({label:c, active:c===st.cat, bg:c===st.cat?'var(--primary)':'var(--surface)', color:c===st.cat?'#fff':'var(--text2)', border:c===st.cat?'var(--primary)':'var(--border)', onClick:()=>this.setState({cat:c})})),
+      loadingExp:st.loadingExp, skel:[1,2,3,4], showResults:!st.loadingExp && filtered.length>0, noResults:!st.loadingExp && !filtered.length,
+      places:filtered.map(x=>({...x, onClick:()=>this.setState({sheet:'detail', detail:x})})),
+      // profile
+      toggleDark:()=>this.setState({dark:!dark}), themeIcon:dark?'icon-moon':'icon-sun',
+      darkTrack:dark?'var(--primary)':'var(--border-strong)', darkKnob:dark?'20px':'0px',
+      notif:st.notif, toggleNotif:()=>this.setState(s=>({notif:!s.notif})),
+      notifTrack:st.notif?'var(--primary)':'var(--border-strong)', notifKnob:st.notif?'20px':'0px',
+      privacyTap:()=>this.showToast('Os teus áudios não são guardados'),
+      logoutTap:()=>this.showToast('Sessão mantida (demo)'),
+      // overlays
+      nav, hasToast:!!st.toast, toast:st.toast,
+      hasSheet:!!st.sheet, closeSheet:()=>this.setState({sheet:null}),
+      isLangSheet:sheetLang, isDetailSheet:st.sheet==='detail', isEmergencySheet:st.sheet==='emergency',
+      sheetTitle:st.sheet==='pa'?'O teu idioma':st.sheet==='pb'?'Idioma da outra pessoa':st.sheet==='src'?'Idioma de origem':st.sheet==='dst'?'Idioma de destino':st.sheet==='emergency'?'Emergência':st.sheet==='about'?'Sobre':(detail?detail.t:''),
+      langs:LANGS.filter(l=>!(st.sheet==='pa'||st.sheet==='pb') || P_LANGS.includes(l[0])).map(([code,n])=>{ const sel = sheetLang && st[st.sheet]===code; return {code:code.toUpperCase(), name:n, sel, bg:sel?'var(--primary-soft)':'transparent', weight:sel?700:500, onClick:setLang(code)}; }),
+      detailMeta:detail?detail.m:'', detailDesc:detail?detail.d:'',
+      saveDetail:()=>{ this.setState({sheet:null}); this.showToast('Guardado nos favoritos'); },
+      call112:()=>{ this.setState({sheet:null}); this.showToast('Demo: chamada não efetuada'); },
+      callUni:()=>{ this.setState({sheet:null}); this.showToast('Demo: contacto aberto'); }
+    };
+  }
+}
+</script>
+</body>
+</html>

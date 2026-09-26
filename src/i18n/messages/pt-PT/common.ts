@@ -1,0 +1,38 @@
+export default {
+  appName: 'Erasmus Help',
+  tagline: 'Apoio a estudantes Erasmus',
+  actions: {
+    continue: 'Continuar',
+    back: 'Voltar',
+    close: 'Fechar',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    retry: 'Tentar novamente',
+    skip: 'Saltar',
+    start: 'Começar',
+    confirm: 'Confirmar',
+    copy: 'Copiar',
+    copied: 'Copiado',
+    listen: 'Ouvir',
+    stop: 'Parar',
+    edit: 'Editar',
+    change: 'Alterar',
+    notNow: 'Agora não',
+    clear: 'Limpar',
+    reload: 'Recarregar',
+    seeAll: 'Ver tudo',
+  },
+  a11y: {
+    skipToContent: 'Saltar para o conteúdo',
+  },
+  status: {
+    loading: 'A carregar…',
+    offline: 'Sem ligação',
+    offlineBody: 'Estás offline. Algumas funcionalidades voltam quando a ligação regressar.',
+    backOnline: 'Ligação restabelecida',
+  },
+  roles: {
+    student: 'Aluno',
+    monitor: 'Monitor',
+  },
+}

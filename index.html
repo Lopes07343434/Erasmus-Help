@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="description" content="Erasmus Help — apoio a estudantes Erasmus: tradução por voz, conversa frente a frente e prática de idiomas." />
+    <meta name="theme-color" content="#F3F4F8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A0D16" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/brand/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/brand/eh-mark.svg" sizes="any" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon-180x180.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Erasmus Help" />
+    <meta name="application-name" content="Erasmus Help" />
+    <title>Erasmus Help</title>
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem('eh:settings') || '{}').state || {};
+        var t = s.theme || 'system';
+        var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

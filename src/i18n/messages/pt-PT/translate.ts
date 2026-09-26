@@ -1,0 +1,75 @@
+export default {
+  title: 'Tradutor',
+  subtitle: 'Fala naturalmente. Nós tratamos do resto.',
+  languages: {
+    source: 'Idioma de origem',
+    target: 'Idioma de destino',
+    sourceButton: 'Idioma de origem: {language}',
+    targetButton: 'Idioma de destino: {language}',
+    swap: 'Trocar idiomas',
+  },
+  recognized: {
+    label: 'Reconhecido · {language}',
+    listening: 'A ouvir…',
+    original: 'Original: {text}',
+    /** Idle hint, by source language (each locale needs its own grammar: "fala em português", "mów po polsku"…). */
+    hint: {
+      'pt-PT': 'Toca no microfone e fala em português.',
+      en: 'Toca no microfone e fala em inglês.',
+      pl: 'Toca no microfone e fala em polaco.',
+      es: 'Toca no microfone e fala em espanhol.',
+      fr: 'Toca no microfone e fala em francês.',
+      de: 'Toca no microfone e fala em alemão.',
+      it: 'Toca no microfone e fala em italiano.',
+    },
+  },
+  result: {
+    label: 'Tradução · {language}',
+    empty: 'A tradução aparece aqui.',
+    corrected: 'Corrigido: {changes}',
+    listen: 'Ouvir',
+    playing: 'A reproduzir…',
+    copy: 'Copiar tradução',
+    speechUnavailable: 'A leitura em voz alta não está disponível neste browser.',
+  },
+  corrections: {
+    punctuation: 'pontuação',
+    accents: 'acentos',
+    capitalization: 'maiúsculas',
+    spelling: 'ortografia',
+    grammar: 'gramática',
+  },
+  steps: {
+    listening: 'A ouvir',
+    processing: 'A processar',
+    translating: 'A traduzir',
+    done: 'Concluído',
+    progress: 'Passo {step} de {total}: {label}',
+  },
+  mic: {
+    idle: 'Toca para falar',
+    listening: 'Toca para parar',
+    processing: 'A processar…',
+    translating: 'A traduzir…',
+    done: 'Falar outra vez',
+    error: 'Toca para tentar outra vez',
+  },
+  toast: {
+    copied: 'Tradução copiada',
+    copyFailed: 'Não foi possível copiar a tradução',
+    speechFailed: 'Não foi possível reproduzir a tradução',
+    speechUnsupported: 'A leitura em voz alta não está disponível neste browser',
+  },
+  /** Translator-specific bodies for errors.<key>.title (the generic errors.<key>.body is used for the other codes). */
+  errorHints: {
+    permissionDenied:
+      'O Tradutor precisa do microfone. Permite o acesso ao microfone nas definições do browser (normalmente no ícone do cadeado, junto ao endereço) e toca no microfone outra vez.',
+    notSupported: 'Este browser não consegue reconhecer voz. Abre a Erasmus Help no Chrome, no Edge ou no Safari para usar o Tradutor.',
+    noSpeech: 'Não captámos nenhuma fala. Fala perto do microfone, de preferência num sítio calmo, e toca para tentar outra vez.',
+    notConfigured: 'O serviço de tradução ainda não está disponível nesta versão da app.',
+    offline: 'O Tradutor precisa de internet para reconhecer e traduzir a tua voz. Verifica a ligação e toca no microfone para tentar outra vez.',
+    timeout: 'O serviço de tradução demorou demasiado a responder. Toca no microfone para tentar outra vez.',
+    unavailable: 'Não conseguimos contactar o serviço de tradução. Tenta outra vez daqui a pouco.',
+    rateLimited: 'Fizeste muitas traduções seguidas. Aguarda um momento e tenta outra vez.',
+  },
+}

@@ -1,0 +1,198 @@
+SUBAGENTE — Especialista em API · Meteorologia (Open-Meteo)
+Projeto: Erasmus Help (React 19 · TS 6 strict · Vite 8 · Tailwind 4 · Vitest)
+Delegado pelo Tech Lead. Devolve no final: o que implementaste, ficheiros alterados,
+decisões tomadas, problemas encontrados, pendentes — conforme o CLAUDE.md do projeto.
+
+────────────────────────────────────────────────────────────────────────
+CONTEXTO — LÊ ISTO PRIMEIRO
+────────────────────────────────────────────────────────────────────────
+A integração com a API da Open-Meteo (meteorologia + geocoding) JÁ ESTÁ FEITA,
+testada e em produção neste projeto. NÃO a recries, não dupliques, não uses
+fetch direto nem outra biblioteca. O teu trabalho é exclusivamente LIGAR o que
+já existe à interface — o ecrã Início (dashboard) ainda não mostra meteorologia.
+
+Ficheiros que já existem e não deves tocar (a menos que encontres um bug real
+neles — nesse caso descreve o problema em vez de o contornar por fora):
+
+  src/services/weather/
+    index.ts        → ponto de entrada único: fetchWeather(coords, opts),
+                       readCachedWeather, clearWeatherCache, WEATHER_CACHE_TTL_MS,
+                       roundTemperature, roundPercent, formatDataAge,
+                       feelFromTemperature, conditionFromWmo, WEATHER_CONDITIONS,
+                       isValidCoordinates, tipos Coordinates/Feel/WeatherCondition/
+                       WeatherProvider/WeatherSnapshot
+    openMeteo.ts     → provider Open-Meteo (fetch real, validação, mapeamento)
+    cache.ts         → cache local com TTL 30 min + stale-while-revalidate
+    feel.ts          → thresholds de sensação térmica (frio/fresco/confortável/quente)
+    format.ts        → roundTemperature, roundPercent, formatDataAge (idade dos dados)
+    wmo.ts           → mapeia weather_code (WMO) → WeatherCondition
+    *.test.ts        → todos os acima têm testes; correm com `npm test`
+
+  src/services/geo/
+    index.ts         → searchCities(countryCode, query, opts), resolveCity(...),
+                       getCountries, getCountryName, countryFlag, searchCountries
+    openMeteoGeocoding.ts, countries.ts, text.ts, types.ts + testes
+
+  src/hooks/useWeather.ts
+    useWeather(location: UserLocation | null): UseWeatherResult
+    → já trata cache, stale-while-revalidate, offline, revalidação ao reconectar/
+      voltar à aba, e já geocodifica localizações antigas guardadas só por nome.
+    Ver assinatura completa e comentários no próprio ficheiro antes de usares.
+
+  src/components/weather/WeatherIcon.tsx
+    <WeatherIcon condition={WeatherCondition | null} isDay size className strokeWidth label />
+    → já mapeia cada WeatherCondition a um ícone lucide-react (dia/noite).
+
+  i18n — já têm TODAS as strings necessárias, em pt-PT/en/pl (verifica os três,
+  não inventes chaves novas sem as adicionar aos três locales):
+    messages/<locale>/weather.ts     → weather.title, weather.conditions.*,
+      weather.feel.*, weather.fields.* (temperature/min/max/rainChance/
+      rainChanceShort/feelsLike/condition), weather.values.degrees/percent,
+      weather.a11y.current/currentNoCondition, weather.states.* (loading,
+      emptyTitle/Body/Action, stale, unavailableTitle/Body, offlineTitle/Body,
+      cityNotFoundTitle/Body, notConfigured), weather.attribution
+    messages/<locale>/dashboard.ts   → dashboard.weather.summary/range/
+      refreshing/openProfile, dashboard.location.region/place — ESTAS CHAVES
+      FORAM CRIADAS DE PROPÓSITO PARA O CARTÃO QUE VAIS FAZER e ainda não são
+      usadas em lado nenhum. Usa-as.
+    messages/<locale>/errors.ts      → errors.offline/timeout/unavailable/
+      notFound/... .title/.body (mapeamento em components/feedback/errorI18nKey.ts)
+
+  src/components/feedback/  (StateView, LoadingState, ErrorState, OfflineBanner)
+  src/components/ui/        (GlassCard, Button, IconTile, Skeleton, ...)
+  src/stores/profileStore.ts → useProfileStore(s => s.location): UserLocation | null
+  src/i18n/I18nProvider.tsx  → useI18n() → { t, tn, formatDate, formatNumber, languageName, locale }
+
+────────────────────────────────────────────────────────────────────────
+OBJETIVO
+────────────────────────────────────────────────────────────────────────
+Criar o cartão de meteorologia do Início e ligá-lo à DashboardPage, usando
+SÓ o que já existe. No fim, um estudante com localização definida no perfil
+deve ver, na página Início, a temperatura atual, a sensação térmica, o
+estado do tempo e a probabilidade de chuva da sua cidade — com loading,
+sucesso, erro, vazio e offline todos tratados (nunca um ecrã em branco ou
+uma mensagem técnica).
+
+────────────────────────────────────────────────────────────────────────
+FICHEIROS A CRIAR
+────────────────────────────────────────────────────────────────────────
+1. src/components/weather/WeatherCard.tsx
+   Props sugeridas: nenhuma obrigatória (lê location de useProfileStore
+   internamente, tal como o resto do projeto faz — ver ex. outras páginas)
+   ou, se preferires mais fácil de testar, aceita `location` por prop e
+   deixa a DashboardPage ler do store e passar. Qualquer uma é aceitável;
+   documenta a escolha no teu relatório final.
+
+   Usa `useWeather(location)` e mapeia UseWeatherResult.status:
+
+   - 'empty'   → StateView (ícone tipo MapPin/pin, tone="primary",
+                 title={t('weather.states.emptyTitle')},
+                 body={t('weather.states.emptyBody')},
+                 action=<Button ...>{t('weather.states.emptyAction')}</Button>
+                 a navegar para /profile — usa GlassCardLink ou Button+Link,
+                 vê o padrão já usado noutras páginas do projeto).
+
+   - 'loading' → <LoadingState label={t('weather.states.loading')} />.
+
+   - 'success', OU ('offline' | 'error') COM `data` presente (cache válida) →
+     renderiza o cartão com os dados (ver secção "Conteúdo do cartão" abaixo).
+     Se `data.stale` for true, ou status !== 'success', mostra uma nota
+     discreta por cima/baixo do valor principal (NÃO substituir o cartão
+     inteiro por um ecrã de erro — há dados para mostrar):
+       - status 'offline'  → t('weather.states.offlineBody')
+       - status 'error'    → t('weather.states.stale', { ago: formatDataAge(data.fetchedAt, locale) })
+       - isRefreshing      → t('dashboard.weather.refreshing') (ex.: pequeno spinner)
+
+   - ('offline' | 'error') SEM `data` →
+     <ErrorState
+       code={status === 'offline' ? 'offline' : undefined}
+       error={status === 'error' ? error : undefined}
+       title={error?.code === 'not-found' ? t('weather.states.cityNotFoundTitle') : undefined}
+       body={error?.code === 'not-found' ? t('weather.states.cityNotFoundBody') : undefined}
+       onRetry={refresh}
+     />
+     (Repara: 'not-found' já tem cópia própria em weather.states.* mais
+     específica do que o genérico errors.notFound — usa-a via os overrides
+     title/body do ErrorState, como no exemplo acima. Para os outros
+     códigos, os overrides genéricos de errors.ts chegam.)
+
+   - error.code === 'not-configured' (VITE_WEATHER_PROVIDER=none) →
+     idem, mas com body={t('weather.states.notConfigured')} e SEM botão de
+     retry (não adianta tentar outra vez).
+
+   Conteúdo do cartão (dados presentes):
+   - <WeatherIcon condition={data.condition} isDay={data.isDay} size={32|40}
+     label={t('weather.a11y.current', { city: location.city.name,
+     condition: data.condition ? t(`weather.conditions.${data.condition}`) : '',
+     temperature: roundTemperature(data.temperature) })} /> — usa
+     weather.a11y.currentNoCondition quando data.condition for null.
+   - Temperatura: `${roundTemperature(data.temperature)}°` — NÃO arredondes
+     à mão, usa roundTemperature de '@/services/weather'.
+   - dashboard.location.place com {city, country} — country vem de
+     getCountryName(location.countryCode, locale) de '@/services/geo'.
+   - dashboard.weather.summary com {condition, feel} traduzidos
+     (weather.conditions.*, weather.feel.*) e dashboard.weather.range com
+     {min, max} já formatados com roundTemperature (mostra só se min/max
+     não forem null).
+   - Probabilidade de chuva (weather.fields.rainChanceShort +
+     weather.values.percent com roundPercent) só se
+     precipitationProbability não for null.
+   - Atribuição obrigatória por licença CC BY 4.0: weather.attribution,
+     em texto pequeno (caption) — não tem de estar sempre visível no
+     cartão do dashboard se já aparecer noutro sítio da app relacionado
+     com meteorologia; se não aparecer em lado nenhum, põe aqui.
+   - Envolve tudo em <GlassCard>. Nada de cores, sombras ou glow inventados
+     — usa só as classes/tokens já definidos (glass, rounded-card,
+     text/text2/text3, primary, etc.), como o resto do design system.
+
+2. src/components/weather/WeatherCard.test.tsx
+   Segue exatamente o padrão de teste já usado no projeto (ver
+   src/hooks/useWeather.test.ts e src/components/ui/*.test.tsx para o
+   estilo de mocks/asserts). Cobre pelo menos:
+   - status 'empty' → mostra emptyTitle e o botão/link de ação.
+   - status 'loading' → mostra o LoadingState (role="status").
+   - status 'success' com dados → mostra temperatura, condição e local.
+   - status 'error' sem cache → ErrorState com retry, e refresh() é chamado
+     ao clicar.
+   - status 'success' com data.stale=true (ou 'offline' com cache) → mostra
+     os dados MAIS a nota de "desatualizado"/offline, sem esconder o valor.
+   Mocka `useWeather` (vi.mock('@/hooks/useWeather')) — não mockes fetch
+   aqui, isso já está coberto nos testes do próprio hook/serviço.
+
+────────────────────────────────────────────────────────────────────────
+FICHEIRO A ALTERAR
+────────────────────────────────────────────────────────────────────────
+src/pages/dashboard/DashboardPage.tsx (atualmente só um placeholder)
+  → importar e renderizar <WeatherCard /> no lugar apropriado do ecrã
+    Início. Não precisas de reconstruir o ecrã todo — só garantir que o
+    cartão aparece; se quiseres deixar o resto da página por fazer,
+    descreve isso como pendente no teu relatório.
+
+────────────────────────────────────────────────────────────────────────
+RESTRIÇÕES (do CLAUDE.md do projeto — aplicam-se sempre)
+────────────────────────────────────────────────────────────────────────
+- Zero fetch dentro de componentes: só através de useWeather/services já
+  existentes.
+- Zero texto visível hardcoded: tudo via t()/tn(), nos três locales
+  (pt-PT, en, pl) se precisares de chave nova — mas primeiro confirma que
+  não precisas mesmo (a maioria já existe, ver acima).
+- Sem dados fictícios: se não houver localização, mostra o estado 'empty'
+  real, nunca uma cidade de exemplo.
+- Cobre sempre loading/success/error/empty/offline — nenhum pode ficar
+  por tratar.
+- Sem scroll horizontal, respeitar safe-area, touch targets ≥44px,
+  `prefers-reduced-motion` em qualquer animação que adiciones.
+- `npm run typecheck`, `npm run lint` e `npm test` têm de passar no final.
+
+────────────────────────────────────────────────────────────────────────
+RESULTADO ESPERADO
+────────────────────────────────────────────────────────────────────────
+- src/components/weather/WeatherCard.tsx (novo)
+- src/components/weather/WeatherCard.test.tsx (novo, a passar)
+- src/pages/dashboard/DashboardPage.tsx (alterado, a renderizar o cartão)
+- eventuais chaves i18n novas só se estritamente necessário, replicadas em
+  pt-PT + en + pl
+- typecheck/lint/test todos verdes
+- relatório final: o que implementaste, ficheiros alterados, decisões
+  (ex.: prop `location` vs. ler do store), problemas encontrados, pendentes
+  (ex.: resto da DashboardPage por fazer)
