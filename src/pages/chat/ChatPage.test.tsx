@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { ToastProvider } from '@/components/ui'
@@ -397,6 +397,8 @@ describe('ChatPage', () => {
       // Removable, and selectable again.
       await user.click(within(participants).getByRole('button', { name: 'Tirar Ana Costa da seleção' }))
       expect(within(participants).getByText('1 selecionado')).toBeInTheDocument()
+      // The keyboard focus moves to the next row on the next frame: wait for it, or it lands mid-typing below.
+      await waitFor(() => expect(within(participants).getByRole('button', { name: 'Tirar Samuel Lopes da seleção' })).toHaveFocus())
       await user.type(search, 'ana')
       await user.click(within(dialog).getByRole('checkbox', { name: '12 — Ana Costa — Aluno' }))
 
