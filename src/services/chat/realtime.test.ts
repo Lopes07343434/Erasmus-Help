@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { groupActions, studentAssociation } from './actions'
+import { groupActions } from './actions'
 import { useChatStore } from './chatStore'
 import { getChatErrorDetail } from './errors'
 import { signOutChat } from './session'
-import { GROUP, OTHER, bootReady, createFakeSupabase, groupRow, myProfileRow, okResult, profileRow, resetChatTestState, type FakeSupabase } from './testUtils'
+import { GROUP, OTHER, bootReady, createFakeSupabase, groupRow, myProfileRow, okResult, resetChatTestState, type FakeSupabase } from './testUtils'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useAdminUsers } from '@/hooks/chat'
 
@@ -105,16 +105,8 @@ describe('actions validation', () => {
     expect(useChatStore.getState().list.byId[GROUP]).toBeUndefined()
   })
 
-  it('lookupStudent only accepts students', async () => {
-    await bootReady(fake)
-    fake.rpc.lookup_profile_by_public_id = () => okResult([profileRow(OTHER, 2, 'Bruno', 'monitor')])
-    await expect(studentAssociation.lookupStudent(2)).rejects.toMatchObject({ code: 'not-found' })
-    fake.rpc.lookup_profile_by_public_id = () => okResult([profileRow(OTHER, 2, 'Bruno', 'student')])
-    await expect(studentAssociation.lookupStudent(2)).resolves.toMatchObject({ displayName: 'Bruno' })
-  })
-
   it('actions fail with the session state when chat is not ready', async () => {
-    await expect(groupActions.lookupByPublicId(3)).rejects.toMatchObject({ code: 'unavailable' })
+    await expect(groupActions.renameGroup(GROUP, 'Novo nome')).rejects.toMatchObject({ code: 'unavailable' })
   })
 })
 

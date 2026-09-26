@@ -15,7 +15,6 @@ import type {
   IncomingMessageNotice,
   PeopleSearchState,
   ProfileActions,
-  StudentAssociation,
   UnreadCounts,
 } from '@/services/chat/api'
 import { isPublicIdQuery, parsePublicId, type ChatMessage, type ConversationKind, type ConversationSummary, type GroupMember, type MyProfile, type PersonSearchResult, type PublicProfile } from '@/services/chat/types'
@@ -167,7 +166,6 @@ export const adminState = (patch: Partial<AdminUsersState> = {}): AdminUsersStat
   error: null,
   search: vi.fn(),
   verifyMonitor: vi.fn(() => Promise.resolve()),
-  setCanManageGroups: vi.fn(() => Promise.resolve()),
   setRole: vi.fn(() => Promise.resolve()),
   setStudentMonitor: vi.fn(() => Promise.resolve()),
   ...patch,
@@ -198,7 +196,6 @@ export const groupActions = {
   setMemberRole: vi.fn((_id: string, _userId: string, _role: 'member' | 'manager') => Promise.resolve()),
   setGroupAvatar: vi.fn((_id: string, _image: Blob | null) => Promise.resolve()),
   leaveGroup: vi.fn((_id: string) => Promise.resolve()),
-  lookupByPublicId: vi.fn((_publicId: number) => Promise.resolve(STUDENT_ANA)),
 } satisfies GroupActions
 
 export const directChats = {
@@ -210,12 +207,6 @@ export const profileActions = {
 } satisfies ProfileActions
 
 export const peopleSearchRetry = vi.fn()
-
-export const studentAssociation = {
-  associateStudent: vi.fn((_publicId: number) => Promise.resolve('c-new')),
-  removeAssociation: vi.fn((_studentId: string) => Promise.resolve()),
-  lookupStudent: vi.fn((_publicId: number) => Promise.resolve(STUDENT_ANA)),
-} satisfies StudentAssociation
 
 /** Last `onNotice` given to useChatNotifications, and the active conversation it was given. */
 export const notifications = {
@@ -233,7 +224,7 @@ export const chatMock = {
     state = initialState()
     notifications.onNotice = null
     notifications.activeConversationId = null
-    for (const fn of [...Object.values(groupActions), ...Object.values(studentAssociation), ...Object.values(directChats), ...Object.values(profileActions), peopleSearchRetry]) fn.mockClear()
+    for (const fn of [...Object.values(groupActions), ...Object.values(directChats), ...Object.values(profileActions), peopleSearchRetry]) fn.mockClear()
   },
 }
 
@@ -266,7 +257,6 @@ export const chatHooksMock = {
   useDirectChats: () => directChats,
   useProfileActions: () => profileActions,
   usePeopleSearch: useMockPeopleSearch,
-  useStudentAssociation: () => studentAssociation,
   useAdminUsers: () => useMockState().admin,
   signOutChat: vi.fn(() => Promise.resolve()),
 }

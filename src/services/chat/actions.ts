@@ -1,8 +1,8 @@
 /**
- * Group / student-association actions (validated inputs → RPC → local store update).
+ * Chat actions (people search, direct chats, photos, groups, admin) (validated inputs → RPC → local store update).
  * Every function throws AppError / ChatError (see errors.ts); the server re-validates everything.
  */
-import type { AdminUsersState, DirectChatActions, GroupActions, PeopleActions, ProfileActions, StudentAssociation } from './api'
+import type { AdminUsersState, DirectChatActions, GroupActions, PeopleActions, ProfileActions } from './api'
 import { prepareAvatarImage } from './avatarImage'
 import { newAvatarPath } from './avatars'
 import {
@@ -19,16 +19,9 @@ import { searchableQuery, validateGroupName, validatePublicId, validateUuid } fr
 import * as repo from './repository'
 import { requireReadyUser } from './runtime'
 import { refreshConversations, refreshMembers, scheduleConversationsRefresh } from './threads'
-import { CHAT_LIMITS, type MemberRole, type PersonSearchResult, type PublicProfile } from './types'
+import { CHAT_LIMITS, type MemberRole, type PersonSearchResult } from './types'
 
 const get = useChatStore.getState
-
-async function lookup(publicId: number): Promise<PublicProfile> {
-  requireReadyUser()
-  const profile = await repo.lookupProfileByPublicId(validatePublicId(publicId))
-  rememberProfiles([profile])
-  return profile
-}
 
 export const peopleActions: PeopleActions = {
   async search(query): Promise<PersonSearchResult[]> {
@@ -154,41 +147,14 @@ export const groupActions: GroupActions = {
     await repo.leaveGroup(id)
     removeConversation(id)
   },
-
-  lookupByPublicId: lookup,
 }
 
-export const studentAssociation: StudentAssociation = {
-  async associateStudent(studentPublicId) {
-    requireReadyUser()
-    const id = await repo.associateStudent(validatePublicId(studentPublicId))
-    await refreshConversations()
-    return id
-  },
-
-  async removeAssociation(studentId) {
-    requireReadyUser()
-    await repo.removeStudentAssociation(validateUuid(studentId))
-    await refreshConversations()
-  },
-
-  async lookupStudent(publicId) {
-    const profile = await lookup(publicId)
-    if (profile.role !== 'student') throw new ChatError('not-found', 'not_found')
-    return profile
-  },
-}
-
-type AdminMutations = Pick<AdminUsersState, 'verifyMonitor' | 'setCanManageGroups' | 'setRole' | 'setStudentMonitor'>
+type AdminMutations = Pick<AdminUsersState, 'verifyMonitor' | 'setRole' | 'setStudentMonitor'>
 
 export const adminMutations: AdminMutations = {
   async verifyMonitor(userId, verified) {
     requireReadyUser()
     await repo.adminVerifyMonitor(validateUuid(userId), verified)
-  },
-  async setCanManageGroups(userId, value) {
-    requireReadyUser()
-    await repo.adminSetCanManageGroups(validateUuid(userId), value)
   },
   async setRole(userId, role) {
     requireReadyUser()

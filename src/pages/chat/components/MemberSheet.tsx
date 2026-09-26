@@ -3,7 +3,7 @@ import { MessageCircle, ShieldCheck, ShieldOff, UserMinus } from 'lucide-react'
 import { Button, Sheet } from '@/components/ui'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { GroupMember, MemberRole } from '@/services/chat/types'
-import { PersonCard } from './IdLookup'
+import { PersonCard } from './PersonCard'
 import { MiniPill } from './Pills'
 
 interface MemberSheetProps {

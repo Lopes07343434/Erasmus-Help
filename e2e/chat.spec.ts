@@ -203,7 +203,8 @@ test('profile photo: upload to Storage, shown to other people, removable', async
   await expect(page.locator('main img[src*="/avatars/users/"]')).toHaveCount(0)
 })
 
-test('screens for review', async ({}, testInfo) => {
+test('screens for review', async () => {
+  const testInfo = test.info()
   await samuel.page.goto('/chat')
   await expect(conversationRow(samuel.page, ana.name)).toBeVisible()
   await samuel.page.screenshot({ path: testInfo.outputPath('chat-list.png') })

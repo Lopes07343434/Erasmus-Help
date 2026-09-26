@@ -66,7 +66,6 @@ export function useAdminUsers(): AdminUsersState {
       }
     return {
       verifyMonitor: wrap(adminMutations.verifyMonitor),
-      setCanManageGroups: wrap(adminMutations.setCanManageGroups),
       setRole: wrap(adminMutations.setRole),
       setStudentMonitor: wrap(adminMutations.setStudentMonitor),
     }

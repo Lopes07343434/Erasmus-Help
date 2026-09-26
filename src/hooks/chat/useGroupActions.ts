@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { directChatActions, groupActions, profileActions, studentAssociation } from '@/services/chat/actions'
-import type { DirectChatActions, GroupActions, ProfileActions, StudentAssociation } from '@/services/chat/api'
+import { directChatActions, groupActions, profileActions } from '@/services/chat/actions'
+import type { DirectChatActions, GroupActions, ProfileActions } from '@/services/chat/api'
 import { startChat } from '@/services/chat/session'
 
 /**
@@ -24,10 +24,4 @@ export function useDirectChats(): DirectChatActions {
 export function useProfileActions(): ProfileActions {
   useEffect(() => startChat(), [])
   return profileActions
-}
-
-/** Verified monitor ↔ student (stable object). lookupStudent rejects non-students with not-found. */
-export function useStudentAssociation(): StudentAssociation {
-  useEffect(() => startChat(), [])
-  return studentAssociation
 }

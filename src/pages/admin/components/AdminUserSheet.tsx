@@ -6,7 +6,7 @@ import type { AdminUserRow, AdminUsersState } from '@/services/chat/api'
 import { parsePublicId } from '@/services/chat/types'
 import { chatErrorMessage } from '@/pages/chat/chatErrors'
 import { publicIdLabel } from '@/pages/chat/chatFormat'
-import { PersonCard } from '@/pages/chat/components/IdLookup'
+import { PersonCard } from '@/pages/chat/components/PersonCard'
 
 type Action = 'verify' | 'role' | 'monitor' | 'removeMonitor'
 

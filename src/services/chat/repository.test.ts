@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getChatErrorDetail } from './errors'
 import * as repo from './repository'
-import { DIRECT, ME, OTHER, conversationRow, createFakeSupabase, myProfileRow, profileRow, textRow, ts, uid, type FakeSupabase } from './testUtils'
+import { DIRECT, GROUP, ME, OTHER, conversationRow, createFakeSupabase, myProfileRow, profileRow, textRow, ts, uid, type FakeSupabase } from './testUtils'
 
 const h = vi.hoisted(() => ({ client: null as unknown }))
 vi.mock('@/services/supabase/client', () => ({ getSupabase: () => h.client }))
@@ -115,16 +115,9 @@ describe('RPCs', () => {
   })
 
   it('surfaces the chat code of a P0001 error', async () => {
-    fake.rpc.associate_student = () => ({ data: null, error: { code: 'P0001', message: 'already_associated', details: null, hint: null }, status: 400 })
-    const err = await repo.associateStudent(12).catch((e: unknown) => e)
-    expect(getChatErrorDetail(err)).toBe('already_associated')
-  })
-
-  it('lookup returns the public profile or not-found', async () => {
-    fake.rpc.lookup_profile_by_public_id = () => ok([profileRow(OTHER, 12, 'Bruno')])
-    await expect(repo.lookupProfileByPublicId(12)).resolves.toEqual({ id: OTHER, publicId: 12, displayName: 'Bruno', role: 'student', avatarPath: null })
-    fake.rpc.lookup_profile_by_public_id = () => ok([])
-    await expect(repo.lookupProfileByPublicId(12)).rejects.toMatchObject({ code: 'not-found' })
+    fake.rpc.add_group_member = () => ({ data: null, error: { code: 'P0001', message: 'already_member', details: null, hint: null }, status: 400 })
+    const err = await repo.addGroupMember(GROUP, 12, false).catch((e: unknown) => e)
+    expect(getChatErrorDetail(err)).toBe('already_member')
   })
 
   it('reports not-configured without a client', async () => {

@@ -139,15 +139,6 @@ export async function fetchProfiles(ids: readonly string[]): Promise<PublicProfi
   return parseList(data, (row) => parsePublicProfile(row))
 }
 
-export async function lookupProfileByPublicId(publicId: number): Promise<PublicProfile> {
-  const sb = requireClient()
-  const data = await call(() => sb.rpc('lookup_profile_by_public_id', { p_public_id: publicId }))
-  const rows = Array.isArray(data) ? data : [data]
-  const profile = parsePublicProfile(rows[0])
-  if (!profile) throw new ChatError('not-found', 'not_found')
-  return profile
-}
-
 /** People directory: by ID ("07" → exact ID first, then IDs starting with 7) or by name. Never includes me. */
 export async function searchProfiles(query: string, limit: number = CHAT_LIMITS.searchResultsLimit): Promise<PersonSearchResult[]> {
   const sb = requireClient()
@@ -395,22 +386,6 @@ export async function leaveGroup(conversationId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Student ↔ monitor
-// ---------------------------------------------------------------------------
-
-export async function associateStudent(studentPublicId: number): Promise<string> {
-  const sb = requireClient()
-  const data = await call(() => sb.rpc('associate_student', { p_student_public_id: studentPublicId }))
-  if (!isUuid(data)) throw new ChatError('unknown')
-  return data
-}
-
-export async function removeStudentAssociation(studentId: string): Promise<void> {
-  const sb = requireClient()
-  await call(() => sb.rpc('remove_student_association', { p_student_id: studentId }))
-}
-
-// ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 
@@ -441,11 +416,6 @@ export async function adminListUsers(search: string | null, limit = 100): Promis
 export async function adminVerifyMonitor(userId: string, verified: boolean): Promise<void> {
   const sb = requireClient()
   await call(() => sb.rpc('admin_verify_monitor', { p_user_id: userId, p_verified: verified }))
-}
-
-export async function adminSetCanManageGroups(userId: string, value: boolean): Promise<void> {
-  const sb = requireClient()
-  await call(() => sb.rpc('admin_set_can_manage_groups', { p_user_id: userId, p_value: value }))
 }
 
 export async function adminSetRole(userId: string, role: Extract<UserRole, 'student' | 'monitor'>): Promise<void> {

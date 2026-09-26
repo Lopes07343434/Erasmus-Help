@@ -121,15 +121,6 @@ export interface GroupActions {
   /** Group administrators: new group photo (any image) or null to remove it. */
   setGroupAvatar(conversationId: string, image: Blob | null): Promise<void>
   leaveGroup(conversationId: string): Promise<void>
-  /** Name/role preview before adding someone (throws not-found / not-allowed). */
-  lookupByPublicId(publicId: number): Promise<PublicProfile>
-}
-
-export interface StudentAssociation {
-  /** Verified monitor associates a student (creates the direct conversation). Returns its id. */
-  associateStudent(studentPublicId: number): Promise<string>
-  removeAssociation(studentId: string): Promise<void>
-  lookupStudent(publicId: number): Promise<PublicProfile>
 }
 
 export interface AdminUserRow extends PublicProfile {
@@ -145,7 +136,6 @@ export interface AdminUsersState {
   error: AppError | null
   search(query: string): void
   verifyMonitor(userId: string, verified: boolean): Promise<void>
-  setCanManageGroups(userId: string, value: boolean): Promise<void>
   setRole(userId: string, role: 'student' | 'monitor'): Promise<void>
   setStudentMonitor(studentPublicId: number, monitorPublicId: number | null): Promise<void>
 }
