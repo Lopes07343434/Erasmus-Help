@@ -11,7 +11,7 @@ const TranslatePage = lazy(() => import('@/pages/translate/TranslatePage'))
 const TalkPage = lazy(() => import('@/pages/talk/TalkPage'))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'))
 const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'))
-const ChatPage = lazy(() => import('@/pages/chat/ChatPage'))
+const ChatLayout = lazy(() => import('@/pages/chat/ChatLayout'))
 const ConversationPage = lazy(() => import('@/pages/chat/ConversationPage'))
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'))
 
@@ -60,8 +60,12 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: page(<DashboardPage />) },
       { path: ROUTES.translate.slice(1), element: page(<TranslatePage />) },
-      { path: ROUTES.chat.slice(1), element: page(<ChatPage />) },
-      { path: `${ROUTES.chat.slice(1)}/:conversationId`, element: page(<ConversationPage />) },
+      {
+        // Renders the list itself (/chat); one screen at a time on mobile, list + conversation side by side from 1024px.
+        path: ROUTES.chat.slice(1),
+        element: page(<ChatLayout />),
+        children: [{ path: ':conversationId', element: page(<ConversationPage />) }],
+      },
       { path: ROUTES.talk.slice(1), element: page(<TalkPage />) },
       { path: ROUTES.settings.slice(1), element: page(<SettingsPage />) },
       { path: ROUTES.profile.slice(1), element: page(<ProfilePage />) },

@@ -8,7 +8,7 @@ import { BottomNav } from '@/components/navigation/BottomNav'
 import { SideNav } from '@/components/navigation/SideNav'
 import { OfflineBanner } from '@/components/feedback/OfflineBanner'
 import { PwaUpdatePrompt } from '@/components/pwa/PwaUpdatePrompt'
-import { CHAT_CONVERSATION_PATTERN } from '@/pages/chat/chatPaths'
+import { CHAT_CONVERSATION_PATTERN, CHAT_PATH } from '@/pages/chat/chatPaths'
 
 // Lazy: it starts the chat session (supabase-js + realtime ≈70 KB gz) after the shell has painted.
 const ChatNotificationsBridge = lazy(() => import('@/pages/chat/components/ChatNotificationsBridge').then((m) => ({ default: m.ChatNotificationsBridge })))
@@ -34,12 +34,15 @@ const LAYOUT_VARS = cn(
  * flicker on first paint, and the hidden one costs nothing: display:none skips its backdrop blur).
  * An open chat conversation is immersive: no bottom nav and no layout offline banner (the conversation has its own
  * sticky header/composer and shows the offline pill in its header).
+ * Chat on desktop is a split view (list + conversation, see ChatLayout): a wider column, the offline pill moves into
+ * the list pane, and the section is not re-keyed per path so the list stays mounted while conversations change.
  */
 export function AppLayout() {
   const { pathname } = useLocation()
   const { t } = useI18n()
   const activeConversationId = useMatch(CHAT_CONVERSATION_PATTERN)?.params.conversationId ?? null
   const immersive = activeConversationId !== null
+  const chatSection = useMatch({ path: CHAT_PATH, end: false }) !== null
 
   return (
     <div
@@ -60,10 +63,15 @@ export function AppLayout() {
         <AppBackground />
         <SideNav />
         <div className="relative z-(--z-content) lg:pl-(--eh-sidebar-w)">
-          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[640px] px-5 pt-(--eh-content-pt) pb-(--eh-content-pb) outline-none lg:px-10">
-            {immersive ? null : <OfflineBanner />}
-            {/* Keyed by pathname: subtle fade on route change (search-param changes don't re-animate). */}
-            <div key={pathname} className="animate-eh-fade">
+          <main
+            id="main"
+            tabIndex={-1}
+            className={cn('mx-auto w-full max-w-[640px] px-5 pt-(--eh-content-pt) pb-(--eh-content-pb) outline-none lg:px-10', chatSection && 'lg:max-w-[1200px]')}
+          >
+            {immersive ? null : <OfflineBanner className={chatSection ? 'lg:hidden' : undefined} />}
+            {/* Keyed by pathname: subtle fade on route change (search-param changes don't re-animate). The chat
+                section keeps one key and fades its own screens / panes (ChatLayout). */}
+            <div key={chatSection ? CHAT_PATH : pathname} className={chatSection ? undefined : 'animate-eh-fade'}>
               <Outlet />
             </div>
           </main>

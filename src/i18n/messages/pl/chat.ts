@@ -45,19 +45,8 @@ const chat: NamespaceShape<'chat'> = {
   empty: {
     directTitle: 'Nie masz jeszcze rozmów.',
     directBody: 'Dodaj osobę za pomocą ID, aby zacząć.',
-    monitorTitle: 'Nie masz jeszcze studentów',
-    monitorBody: 'Dodaj studentów za pomocą ID widocznego w ich Profilu, aby zacząć rozmowę.',
     groupsTitle: 'Nie należysz jeszcze do żadnej grupy',
-    groupsBody: 'Gdy ktoś doda Cię do grupy, pojawi się ona tutaj.',
     groupsCreateBody: 'Utwórz grupę, aby rozmawiać z kilkoma osobami jednocześnie.',
-  },
-  noMonitor: {
-    title: 'Nie masz jeszcze opiekuna',
-    body: 'Twój opiekun doda Cię za pomocą Twojego ID. Udostępnij je, a rozmowa pojawi się tutaj.',
-  },
-  pending: {
-    title: 'Konto opiekuna czeka na weryfikację',
-    body: 'Twoje konto opiekuna czeka na weryfikację przez administratora. Do tego czasu możesz rozmawiać w grupach, do których Cię dodano.',
   },
   id: {
     yours: 'Twoje ID',
@@ -68,7 +57,6 @@ const chat: NamespaceShape<'chat'> = {
     hint: 'Udostępnij je, aby inni mogli dodać Cię w czacie.',
   },
   actions: {
-    addStudent: 'Dodaj studenta',
     createGroup: 'Utwórz grupę',
     backToList: 'Wróć do czatu',
     groupInfo: 'Informacje o grupie',
@@ -197,14 +185,6 @@ const chat: NamespaceShape<'chat'> = {
     deselect: 'Usuń z wyboru: {name}',
     noneSelected: 'Nikogo jeszcze nie wybrano. Uczestników możesz dodać także później.',
   },
-  addStudent: {
-    title: 'Dodaj studenta',
-    body: 'Poproś tę osobę o ID: jest widoczne w Profilu i w Czacie jej aplikacji.',
-    idLabel: 'ID studenta',
-    notStudent: 'To ID nie należy do konta studenta.',
-    associate: 'Dodaj i otwórz rozmowę',
-    associated: 'Utworzono rozmowę: {name}',
-  },
   search: {
     label: 'Szukaj w czacie',
     placeholder: 'Szukaj po imieniu, ID lub grupie',
@@ -219,8 +199,12 @@ const chat: NamespaceShape<'chat'> = {
     error: 'Nie udało się wyszukać.',
     exact: 'Dokładne ID',
     result: '{id} — {name} — {role}',
-    openChat: 'Napisz',
     openChatWith: 'Otwórz rozmowę: {name}',
+    results: 'Wyniki wyszukiwania',
+    resultsCount_one: '{count} wynik',
+    resultsCount_few: '{count} wyniki',
+    resultsCount_many: '{count} wyników',
+    resultsCount_other: '{count} wyniku',
   },
   addPerson: {
     title: 'Dodaj osobę',

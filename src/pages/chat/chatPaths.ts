@@ -16,7 +16,12 @@ export const parseChatTab = (value: string | null): ChatTab => (value === 'grupo
 
 export const chatTabPath = (tab: ChatTab): string => (tab === 'conversas' ? CHAT_PATH : `${CHAT_PATH}?tab=${tab}`)
 
-export const conversationPath = (conversationId: string): string => `${CHAT_PATH}/${encodeURIComponent(conversationId)}`
+/**
+ * An open conversation. `tab` keeps the list's tab in the URL (desktop split view: the list pane stays on "Grupos"
+ * while a group is open); 'conversas' is the default and adds nothing.
+ */
+export const conversationPath = (conversationId: string, tab?: ChatTab): string =>
+  `${CHAT_PATH}/${encodeURIComponent(conversationId)}${tab === 'grupos' ? '?tab=grupos' : ''}`
 
 /** DOM ids of the Chat tabs / tab panels (ChatTabs + ChatPage). */
 export const chatTabId = (baseId: string, value: string) => `${baseId}-tab-${value}`

@@ -45,19 +45,8 @@ const chat: NamespaceShape<'chat'> = {
   empty: {
     directTitle: 'You have no conversations yet.',
     directBody: 'Add someone by their ID to get started.',
-    monitorTitle: 'No students yet',
-    monitorBody: 'Add students with the ID shown in their Profile to start chatting.',
     groupsTitle: "You're not in any group yet",
-    groupsBody: 'When someone adds you to a group, it will appear here.',
     groupsCreateBody: 'Create a group to talk to several people at once.',
-  },
-  noMonitor: {
-    title: "You don't have a monitor yet",
-    body: 'Your monitor will add you using your ID. Share it and the conversation will appear here.',
-  },
-  pending: {
-    title: 'Monitor account awaiting verification',
-    body: 'Your monitor account is waiting to be verified by an administrator. Meanwhile, you can chat in the groups you were added to.',
   },
   id: {
     yours: 'Your ID',
@@ -68,7 +57,6 @@ const chat: NamespaceShape<'chat'> = {
     hint: 'Share it so people can add you on the chat.',
   },
   actions: {
-    addStudent: 'Add student',
     createGroup: 'Create group',
     backToList: 'Back to Chat',
     groupInfo: 'Group info',
@@ -197,14 +185,6 @@ const chat: NamespaceShape<'chat'> = {
     deselect: 'Remove {name} from the selection',
     noneSelected: "You haven't picked anyone yet. You can also add participants later.",
   },
-  addStudent: {
-    title: 'Add student',
-    body: 'Ask the person for their ID: it appears in the Profile and in the Chat of their app.',
-    idLabel: 'Student ID',
-    notStudent: "That ID doesn't belong to a student account.",
-    associate: 'Add and open conversation',
-    associated: 'Conversation with {name} created',
-  },
   search: {
     label: 'Search chat',
     placeholder: 'Search by name, ID or group',
@@ -219,8 +199,12 @@ const chat: NamespaceShape<'chat'> = {
     error: "Couldn't search.",
     exact: 'Exact ID',
     result: '{id} — {name} — {role}',
-    openChat: 'Chat',
     openChatWith: 'Open chat with {name}',
+    results: 'Search results',
+    resultsCount_one: '{count} result',
+    resultsCount_few: '{count} results',
+    resultsCount_many: '{count} results',
+    resultsCount_other: '{count} results',
   },
   addPerson: {
     title: 'Add person',
