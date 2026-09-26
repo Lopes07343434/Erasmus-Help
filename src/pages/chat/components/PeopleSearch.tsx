@@ -3,8 +3,9 @@ import { Check, MessageCircle, RotateCw, Search } from 'lucide-react'
 import { Button, cn, Skeleton, Spinner, TextField } from '@/components/ui'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { PeopleSearchState } from '@/services/chat/api'
-import { CHAT_LIMITS, formatPublicIdNumber, type PersonSearchResult, type PublicProfile } from '@/services/chat/types'
-import { personResultLabel, publicIdLabel } from '../chatFormat'
+import { CHAT_LIMITS, type PersonSearchResult, type PublicProfile } from '@/services/chat/types'
+import { personResultLabel } from '../chatFormat'
+import { NameWithId } from './NameWithId'
 import { ChatAvatar } from './ChatAvatar'
 import { MiniPill, RolePill } from './Pills'
 
@@ -12,7 +13,7 @@ import { MiniPill, RolePill } from './Pills'
  * Shared "find people by ID or name" building blocks (rpc search_profiles via usePeopleSearch):
  *   <PeopleSearchField>  the search input (ID or name, clear button)
  *   <PeopleResults>      hint / loading / error / "Nenhum utilizador encontrado." / result rows
- *   <PersonResultRow>    "07 — Samuel Lopes — Monitor" (or "Samuel Lopes / ID: 07 / Monitor") with avatar and a
+ *   <PersonResultRow>    "Samuel Lopes  ID: 07" over the role pill with avatar and a
  *                        trailing action, a checkbox row (multi-select) or a button row (open the chat)
  * Used by the Chat search, "Adicionar pessoa", "Criar grupo" and "Adicionar membro". A result always carries the
  * full ID, so picking "10" never picks "01".
@@ -84,37 +85,20 @@ interface PersonResultRowProps {
   busy?: boolean
   /** Greyed out with a note (e.g. "Já faz parte do grupo"). */
   disabledNote?: string
-  /**
-   * 'id' (default): "07 — Samuel Lopes" first, for ID searches. 'name': the name first with "ID: 07" under it,
-   * for name searches.
-   */
-  layout?: 'id' | 'name'
 }
 
 /** One person: avatar · "07" (mono) · name · role pill (· "ID exato") · trailing action or check mark. */
-export function PersonResultRow({ person, action, selected, onToggle, onSelect, selectLabel, busy = false, disabledNote, layout = 'id' }: PersonResultRowProps) {
+export function PersonResultRow({ person, action, selected, onToggle, onSelect, selectLabel, busy = false, disabledNote }: PersonResultRowProps) {
   const { t } = useI18n()
   const descriptionId = useId()
   const exact = 'exactIdMatch' in person && person.exactIdMatch
   const label = personResultLabel(person, { t })
-  const byName = layout === 'name'
   const content = (
     <>
       <ChatAvatar name={person.displayName} photo={person.avatarPath} size={40} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {byName ? (
-          <span className="min-w-0 truncate text-[15px] leading-[1.3] font-semibold">{person.displayName}</span>
-        ) : (
-          <span className="flex min-w-0 items-baseline gap-1.5 text-[15px] leading-[1.3]">
-            <span className="shrink-0 font-mono text-[13px] font-medium text-primary tabular-nums">{formatPublicIdNumber(person.publicId)}</span>
-            <span aria-hidden="true" className="shrink-0 text-text3">
-              —
-            </span>
-            <span className="min-w-0 truncate font-semibold">{person.displayName}</span>
-          </span>
-        )}
+        <NameWithId name={person.displayName} publicId={person.publicId} className="text-[15px] leading-[1.3]" />
         <span className="flex flex-wrap items-center gap-1.5">
-          {byName ? <span className="font-mono text-xs font-medium text-text3 tabular-nums">{publicIdLabel(person.publicId)}</span> : null}
           <RolePill role={person.role} />
           {exact ? <MiniPill tone="primary">{t('chat.search.exact')}</MiniPill> : null}
           {disabledNote ? <span className="text-xs font-medium text-text3">{disabledNote}</span> : null}

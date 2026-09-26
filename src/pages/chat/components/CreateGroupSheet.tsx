@@ -4,12 +4,13 @@ import { CircleCheck, Plus, Users, X } from 'lucide-react'
 import { Button, IconButton, ListGroup, ListSwitchRow, Sheet, TextField, useToast } from '@/components/ui'
 import { useChatSession, useGroupActions, usePeopleSearch } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
-import { CHAT_LIMITS, formatPublicIdNumber, isPublicIdQuery, type PublicProfile } from '@/services/chat/types'
+import { CHAT_LIMITS, type PublicProfile } from '@/services/chat/types'
 import { sanitizeText } from '@/utils/validation'
 import { chatErrorMessage } from '../chatErrors'
 import { conversationPath } from '../chatPaths'
 import { isAdmin } from '../chatPermissions'
 import { useExactMatchSubmit } from '../chatSearch'
+import { NameWithId } from './NameWithId'
 import { PeopleResults, PeopleSearchField, PersonResultRow } from './PeopleSearch'
 
 interface CreateGroupSheetProps {
@@ -135,7 +136,7 @@ function CreateGroupForm({ onClose, nameRef }: { onClose: () => void; nameRef: R
           title={t('chat.addPerson.results')}
           hint={null}
           renderPerson={(person) => (
-            <PersonResultRow person={person} layout={isPublicIdQuery(query) ? 'id' : 'name'} selected={selectedIds.has(person.id)} onToggle={toggle} />
+            <PersonResultRow person={person} selected={selectedIds.has(person.id)} onToggle={toggle} />
           )}
         />
         {limitError ? (
@@ -160,13 +161,7 @@ function CreateGroupForm({ onClose, nameRef }: { onClose: () => void; nameRef: R
               {selected.map((p, index) => (
                 <div key={p.id} className="flex min-h-12 items-center gap-2.5 py-0.5 pr-1 pl-4">
                   <CircleCheck size={18} aria-hidden="true" className="shrink-0 text-primary" />
-                  <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-sm leading-[1.3]">
-                    <span className="shrink-0 font-mono text-[13px] font-medium text-primary tabular-nums">{formatPublicIdNumber(p.publicId)}</span>
-                    <span aria-hidden="true" className="shrink-0 text-text3">
-                      —
-                    </span>
-                    <span className="min-w-0 truncate font-semibold">{p.displayName}</span>
-                  </span>
+                  <NameWithId name={p.displayName} publicId={p.publicId} className="flex-1 text-sm leading-[1.3]" />
                   <IconButton
                     variant="plain"
                     icon={X}

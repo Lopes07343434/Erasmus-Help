@@ -51,7 +51,6 @@ export function ChatSearchResults({ search, me, now, offline, activeConversation
           renderPerson={(person) => (
             <PersonResultRow
               person={person}
-              layout={search.idQuery ? 'id' : 'name'}
               onSelect={() => search.openPerson(person)}
               selectLabel={t('chat.search.openChatWith', { name: person.displayName })}
               busy={search.openingId === person.id}

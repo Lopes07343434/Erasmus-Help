@@ -91,7 +91,6 @@ function AddPersonForm({ me, onClose, inputRef }: { me: MyProfile; onClose: () =
         renderPerson={(person) => (
           <PersonResultRow
             person={person}
-            layout={idQuery ? 'id' : 'name'}
             action={
               <Button
                 variant="secondary"

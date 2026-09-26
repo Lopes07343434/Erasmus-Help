@@ -303,7 +303,7 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
   )
 }
 
-/** "15 — Samuel Lopes" (+ "Tu") over the role pill (+ "Administrador"). Other participants open their options. */
+/** "Samuel Lopes ID: 15" (+ "Tu") over the role pill (+ "Administrador"). Other participants open their options. */
 function MemberRow({ member, isMe, onOpen }: { member: GroupMember; isMe: boolean; onOpen?: () => void }) {
   const { t } = useI18n()
   const id = publicIdNumber(member.publicId)
@@ -311,17 +311,10 @@ function MemberRow({ member, isMe, onOpen }: { member: GroupMember; isMe: boolea
     <ListRow
       leading={<ChatAvatar name={member.displayName} photo={member.avatarPath} size={36} />}
       label={
-        // Inline flow (not flex) so a long name wraps right after "12 —" instead of dropping to its own line.
+        // Inline flow (not flex) so the ID follows a long name on the same line when it fits.
         <span className="leading-[1.35]">
-          {id ? (
-            <>
-              <span className="font-mono text-[13px] font-medium text-primary tabular-nums">{id}</span>
-              <span aria-hidden="true" className="text-text3">
-                {' — '}
-              </span>
-            </>
-          ) : null}
           <span className="font-semibold">{member.displayName}</span>
+          {id ? <span className="ml-1.5 font-mono text-[13px] font-medium text-primary tabular-nums">{`ID: ${id}`}</span> : null}
           {isMe ? <MiniPill className="ml-1.5 align-[1px]">{t('chat.group.you')}</MiniPill> : null}
         </span>
       }
