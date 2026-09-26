@@ -1,0 +1,99 @@
+# Erasmus Help → https://erasmus.help.pontodigital.eu (Hostinger VPS, behind the existing Coolify proxy).
+#
+# Every push to main (or "Run workflow"): lint + unit tests + production build, then the build is
+# uploaded over SSH and activated by deploy/remote-deploy.sh (keeps the previous releases, health
+# check, automatic rollback). Finally the public URL is checked.
+#
+# One-time setup: repository secret DEPLOY_SSH_KEY = the private key whose public key is in the
+# VPS root's authorized_keys (GitHub → Settings → Secrets and variables → Actions). Without it the
+# build still runs and the deploy step is skipped with a warning.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_HOST: 76.13.37.156
+  DEPLOY_PORT: '22'
+  DEPLOY_USER: root
+  DOMAIN: erasmus.help.pontodigital.eu
+  APP_DIR: /opt/erasmus-help
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://nankvmfyyncoopoxqibm.supabase.co
+          # Publishable key: public by design (it ships in the browser bundle); the data is protected by RLS.
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zva9ZabTjaNDjvI_c_cd3w_eE2SWnrH
+
+      - name: Package
+        run: tar -czf release.tar.gz -C dist .
+
+      - name: Deploy key available?
+        id: key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -n "$DEPLOY_SSH_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Repository secret DEPLOY_SSH_KEY is not set: the build passed, the deploy was skipped."
+          fi
+
+      - name: Upload and activate
+        if: steps.key.outputs.present == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_PORT" -t ed25519 "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH_OPTS=(-i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=20)
+          RELEASE="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          INCOMING="$APP_DIR/incoming/$RELEASE"
+          ssh "${SSH_OPTS[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$INCOMING'"
+          scp "${SSH_OPTS[@]}" -P "$DEPLOY_PORT" release.tar.gz deploy/Caddyfile deploy/remote-deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:$INCOMING/"
+          ssh "${SSH_OPTS[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DOMAIN='$DOMAIN' APP_DIR='$APP_DIR' bash '$INCOMING/remote-deploy.sh' '$RELEASE' '$INCOMING/release.tar.gz'; rc=\$?; rm -rf '$INCOMING'; exit \$rc"
+
+      - name: Check the public URL
+        if: steps.key.outputs.present == 'true'
+        run: |
+          # The first deploy waits for the Let's Encrypt certificate.
+          for _ in $(seq 1 30); do
+            if curl -fsS --max-time 10 "https://$DOMAIN/" -o home.html && grep -q '<div id="root">' home.html \
+              && curl -fsS --max-time 10 -o /dev/null "https://$DOMAIN/chat"; then
+              echo "https://$DOMAIN is live"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::https://$DOMAIN did not answer with the app (DNS, certificate or proxy)."
+          exit 1
