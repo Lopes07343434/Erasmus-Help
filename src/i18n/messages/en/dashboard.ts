@@ -47,7 +47,13 @@ const dashboard: NamespaceShape<'dashboard'> = {
   emergency: {
     title: 'Emergency',
     body: '112 is the European emergency number. It’s free, works across the EU and, in many countries, you can speak English.',
-    call: 'Call 112',
+    bodyCountry: 'In {country}, the general emergency number is {number}. It’s free and works without credit.',
+    anyPhone: '112 also works from any mobile phone in Europe.',
+    call: 'Call {number}',
+    services: 'Direct numbers',
+    police: 'Police',
+    ambulance: 'Ambulance',
+    fire: 'Fire brigade',
   },
   a11y: {
     newTab: '(opens in a new tab)',

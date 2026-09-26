@@ -31,6 +31,7 @@ export async function resolveCity(countryCode: string, cityName: string, opts?: 
   return best
 }
 
+export { getEmergencyNumbers, type EmergencyNumbers } from './emergencyNumbers'
 export { clearGeocodingMemo } from './openMeteoGeocoding'
 export { CITY_QUERY_MIN_LENGTH, CITY_QUERY_MAX_LENGTH, sanitizeCityQuery, foldText } from './text'
 export {

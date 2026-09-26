@@ -47,7 +47,13 @@ const dashboard: NamespaceShape<'dashboard'> = {
   emergency: {
     title: 'Numer alarmowy',
     body: '112 to europejski numer alarmowy. Jest bezpłatny, działa w całej UE, a w wielu krajach możesz rozmawiać po angielsku.',
-    call: 'Zadzwoń pod 112',
+    bodyCountry: 'Ogólny numer alarmowy w kraju {country} to {number}. Połączenie jest bezpłatne i działa bez środków na koncie.',
+    anyPhone: 'Numer 112 działa też z każdego telefonu komórkowego w Europie.',
+    call: 'Zadzwoń pod {number}',
+    services: 'Numery bezpośrednie',
+    police: 'Policja',
+    ambulance: 'Pogotowie ratunkowe',
+    fire: 'Straż pożarna',
   },
   a11y: {
     newTab: '(otwiera się w nowej karcie)',

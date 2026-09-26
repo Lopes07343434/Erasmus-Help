@@ -45,7 +45,13 @@ export default {
   emergency: {
     title: 'Emergência',
     body: 'O 112 é o número europeu de emergência. É gratuito, funciona em toda a UE e, em muitos países, podes falar em inglês.',
-    call: 'Ligar 112',
+    bodyCountry: '{country}: o número geral de emergência é o {number}. É gratuito e funciona sem saldo.',
+    anyPhone: 'O 112 também funciona em qualquer telemóvel na Europa.',
+    call: 'Ligar {number}',
+    services: 'Números diretos',
+    police: 'Polícia',
+    ambulance: 'Ambulância',
+    fire: 'Bombeiros',
   },
   a11y: {
     newTab: '(abre num novo separador)',
