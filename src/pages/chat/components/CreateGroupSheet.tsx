@@ -2,12 +2,13 @@ import { useId, useMemo, useRef, useState, type FormEvent, type RefObject } from
 import { useNavigate } from 'react-router'
 import { CircleCheck, Plus, Users, X } from 'lucide-react'
 import { Button, IconButton, ListGroup, ListSwitchRow, Sheet, TextField, useToast } from '@/components/ui'
-import { useGroupActions, usePeopleSearch } from '@/hooks/chat'
+import { useChatSession, useGroupActions, usePeopleSearch } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
 import { CHAT_LIMITS, formatPublicIdNumber, isPublicIdQuery, type PublicProfile } from '@/services/chat/types'
 import { sanitizeText } from '@/utils/validation'
 import { chatErrorMessage } from '../chatErrors'
 import { conversationPath } from '../chatPaths'
+import { isAdmin } from '../chatPermissions'
 import { useExactMatchSubmit } from '../chatSearch'
 import { PeopleResults, PeopleSearchField, PersonResultRow } from './PeopleSearch'
 
@@ -33,6 +34,8 @@ function CreateGroupForm({ onClose, nameRef }: { onClose: () => void; nameRef: R
   const toast = useToast()
   const navigate = useNavigate()
   const actions = useGroupActions()
+  // Groups nobody can leave are reserved to platform admins (the server refuses them for everyone else).
+  const canLockGroup = isAdmin(useChatSession().me)
   const participantsTitleId = useId()
   const searchRef = useRef<HTMLInputElement>(null)
   const selectedListRef = useRef<HTMLDivElement>(null)
@@ -180,9 +183,11 @@ function CreateGroupForm({ onClose, nameRef }: { onClose: () => void; nameRef: R
         )}
       </section>
 
-      <ListGroup>
-        <ListSwitchRow icon={Users} label={t('chat.createGroup.allowLeave')} checked={allowLeave} onCheckedChange={setAllowLeave} />
-      </ListGroup>
+      {canLockGroup ? (
+        <ListGroup>
+          <ListSwitchRow icon={Users} label={t('chat.createGroup.allowLeave')} checked={allowLeave} onCheckedChange={setAllowLeave} />
+        </ListGroup>
+      ) : null}
 
       {error ? (
         <p role="alert" className="m-0 text-sm font-semibold text-danger">

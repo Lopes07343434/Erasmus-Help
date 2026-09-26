@@ -2279,8 +2279,10 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- greatest(…, max): a counter that fell behind (e.g. a partial restore) heals itself instead of
+  -- colliding with an existing ID. Normally counter = max, so numbers stay consecutive.
   update private.public_id_counter c
-     set last_value = c.last_value + 1
+     set last_value = greatest(c.last_value, coalesce((select max(p.public_id) from public.profiles p), 0)) + 1
    where c.singleton
   returning c.last_value into new.public_id;
 
@@ -2298,8 +2300,114 @@ create trigger profiles_public_id
 
 revoke all on function private.profiles_assign_public_id() from public, anon, authenticated;
 
+-- "Never editable", in EVERY context (users, admins, SQL editor, service_role): profiles_guard only
+-- checks end-user requests, this one has no exception.
+create or replace function private.profiles_public_id_immutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.public_id is distinct from old.public_id then
+    raise exception 'not_allowed' using errcode = 'P0001', detail = 'public_id';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_public_id_immutable on public.profiles;
+create trigger profiles_public_id_immutable
+  before update of public_id on public.profiles
+  for each row execute function private.profiles_public_id_immutable();
+
+revoke all on function private.profiles_public_id_immutable() from public, anon, authenticated;
+
 -- Prefix search on the ID ("1" → 1, 10–19, 100–199, …).
 create index if not exists profiles_public_id_text_idx on public.profiles ((public_id::text) text_pattern_ops);
+
+-- Same as migration 3, except that only the "two tabs, same user" race (primary key) is absorbed:
+-- any other unique violation (e.g. on public_id) is raised instead of returning an empty row.
+create or replace function public.upsert_my_profile(
+  p_display_name text,
+  p_role         public.user_role default null,
+  p_my_language  text default null,
+  p_app_language text default null,
+  p_country_code text default null,
+  p_city         text default null
+)
+returns public.profiles
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid        uuid := private.require_uid();
+  v_name       text := private.clean_text(p_display_name);
+  v_city       text := private.clean_text(p_city);
+  v_exists     boolean;
+  v_row        public.profiles;
+  v_constraint text;
+begin
+  if v_name is null or char_length(v_name) > 40 then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_display_name';
+  end if;
+  if p_my_language is not null and p_my_language not in ('pt-PT', 'en', 'pl', 'es', 'fr', 'de', 'it') then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_my_language';
+  end if;
+  if p_app_language is not null and p_app_language not in ('pt-PT', 'en', 'pl') then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_app_language';
+  end if;
+  if p_country_code is not null and p_country_code !~ '^[A-Z]{2}$' then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_country_code';
+  end if;
+  if p_city is not null and (v_city is null or char_length(v_city) > 80) then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_city';
+  end if;
+
+  v_exists := exists (select 1 from public.profiles p where p.id = v_uid);
+  if not v_exists and (p_role is null or p_role not in ('student', 'monitor')) then
+    raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_role';
+  end if;
+
+  -- UPDATE first and INSERT only for a brand-new profile (an insert draws a public ID).
+  if v_exists then
+    update public.profiles p
+       set display_name = v_name,
+           my_language  = coalesce(p_my_language, p.my_language),
+           app_language = coalesce(p_app_language, p.app_language),
+           country_code = coalesce(p_country_code, p.country_code),
+           city         = coalesce(v_city, p.city)
+     where p.id = v_uid
+    returning p.* into v_row;
+  else
+    begin
+      insert into public.profiles (id, display_name, role, my_language, app_language, country_code, city)
+      values (v_uid, v_name, p_role, p_my_language, p_app_language, p_country_code, v_city)
+      returning * into v_row;
+    exception when unique_violation then
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint is distinct from 'profiles_pkey' then
+        raise;
+      end if;
+      -- Concurrent first call from the same user (two tabs): the other call created it; update instead.
+      update public.profiles p
+         set display_name = v_name,
+             my_language  = coalesce(p_my_language, p.my_language),
+             app_language = coalesce(p_app_language, p.app_language),
+             country_code = coalesce(p_country_code, p.country_code),
+             city         = coalesce(v_city, p.city)
+       where p.id = v_uid
+      returning p.* into v_row;
+    end;
+  end if;
+
+  return v_row;
+end;
+$$;
+
+revoke all on function public.upsert_my_profile(text, public.user_role, text, text, text, text) from public, anon;
+grant execute on function public.upsert_my_profile(text, public.user_role, text, text, text, text) to authenticated, service_role;
 
 -- -----------------------------------------------------------------------------
 -- 2. Avatar columns
@@ -2400,7 +2508,7 @@ as $$
 $$;
 
 -- A group must always have an administrator while it has members; an empty group is deleted.
--- Call with the group row locked (private.lock_visible_group).
+-- Called by the conversation_members_after_delete trigger (group row locked).
 create or replace function private.ensure_group_manager(p_conversation uuid)
 returns void
 language plpgsql
@@ -2435,6 +2543,34 @@ begin
 end;
 $$;
 
+-- Every way a membership disappears (leave, removal, account deletion cascading from auth.users)
+-- keeps the invariant: a group with members has an administrator; an empty group is deleted.
+-- Skipped when the group itself is being deleted (its row is already gone).
+create or replace function private.conversation_members_after_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform 1
+     from public.conversations c
+    where c.id = old.conversation_id
+      and c.kind = 'group'
+      for no key update;
+  if found then
+    perform private.ensure_group_manager(old.conversation_id);
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists conversation_members_after_delete on public.conversation_members;
+create trigger conversation_members_after_delete
+  after delete on public.conversation_members
+  for each row execute function private.conversation_members_after_delete();
+
+revoke all on function private.conversation_members_after_delete() from public, anon, authenticated;
 revoke all on function private.can_manage_group(uuid) from public, anon;
 revoke all on function private.can_see_role(boolean, public.user_role) from public, anon;
 revoke all on function private.fold_text(text) from public, anon, authenticated;
@@ -2605,6 +2741,7 @@ $$;
 -- Any user with a profile. The caller becomes the group administrator ('manager').
 -- p_member_public_ids: people the caller can see (see can_see_role). All IDs must resolve,
 -- otherwise nothing is created (not_found). Max 500 IDs per call.
+-- p_allow_leave = false (members cannot leave) is reserved to platform admins.
 create or replace function public.create_group(
   p_name              text,
   p_member_public_ids bigint[] default '{}',
@@ -2631,6 +2768,11 @@ begin
 
   if v_name is null or char_length(v_name) > 60 then
     raise exception 'invalid_input' using errcode = 'P0001', detail = 'p_name';
+  end if;
+  -- Anyone can create a group and add people by ID, so only platform admins may create groups
+  -- whose members cannot leave (otherwise anybody could trap anybody in a group).
+  if not coalesce(p_allow_leave, true) and not v_is_admin then
+    raise exception 'not_allowed' using errcode = 'P0001', detail = 'p_allow_leave';
   end if;
 
   v_ids := array(
@@ -2772,11 +2914,10 @@ begin
     raise exception 'not_allowed' using errcode = 'P0001';
   end if;
 
+  -- The conversation_members_after_delete trigger hands the group over if needed.
   delete from public.conversation_members m
    where m.conversation_id = v_conv.id
      and m.user_id = p_user_id;
-
-  perform private.ensure_group_manager(v_conv.id);
 end;
 $$;
 
@@ -2870,11 +3011,10 @@ begin
     raise exception 'not_allowed' using errcode = 'P0001';
   end if;
 
+  -- The conversation_members_after_delete trigger hands the group over (or deletes an empty group).
   delete from public.conversation_members m
    where m.conversation_id = v_conv.id
      and m.user_id = v_uid;
-
-  perform private.ensure_group_manager(v_conv.id);
 end;
 $$;
 
@@ -3187,6 +3327,9 @@ create policy avatars_select_manageable
     and private.can_manage_avatar_object(name)
   );
 
+-- Deleting is allowed only for photos older than 24 h: the upload limit counts the objects of the last
+-- 24 h, so an upload → delete loop cannot bypass it. A photo replaced within a day stays as an orphan
+-- until a later clean-up (the app retries removing the previous photo; see README → retention).
 drop policy if exists avatars_delete_manageable on storage.objects;
 create policy avatars_delete_manageable
   on storage.objects
@@ -3194,6 +3337,7 @@ create policy avatars_delete_manageable
   to authenticated
   using (
     bucket_id = 'avatars'
+    and created_at < now() - interval '1 day'
     and private.can_manage_avatar_object(name)
   );
 

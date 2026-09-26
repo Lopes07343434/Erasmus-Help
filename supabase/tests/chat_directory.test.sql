@@ -14,9 +14,8 @@
 -- asserted with literal numbers. While this file runs it holds the counter row lock, so real
 -- sign-ups on the same database wait a few seconds.
 --
--- Assertions inside `todo(...)` document KNOWN SCHEMA BUGS (see the BUG-n comments): they are
--- expected to fail until the migration is fixed and do not fail the run. When a fix lands, the
--- run reports "unexpectedly succeeded" → remove the todo().
+-- The BUG-n comments mark regressions for schema bugs found (and fixed in the migration) while
+-- writing this suite: keep those assertions.
 --
 -- Cast (uuid 00000000-0000-4000-9000-0000000000xx; bulk users 00000000-0000-4000-a000-000000000nnn)
 --   a1 AD  "Admin Root" (platform admin)     a2 AD2 "Admin Second" (platform admin)
@@ -31,7 +30,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(244);
+select plan(247);
 
 -- -----------------------------------------------------------------------------
 -- Fixtures (owner)
@@ -218,12 +217,10 @@ select throws_ok($$ update public.profiles set public_id = 999 where id = '00000
 select throws_ok($$ update public.profiles set public_id = 999 where id = '00000000-0000-4000-9000-0000000000a1' $$,
   'P0001', 'not_allowed', 'ID: the guard trigger blocks a platform admin changing their own public_id');
 
--- BUG-1: "never editable" does not hold in trusted contexts: profiles_guard skips every check when
--- auth.uid() is null (SQL editor, migrations, service_role API key). Setting a public_id ahead of
--- the counter makes every future sign-up collide when the counter reaches it (see BUG-2).
+-- BUG-1 (fixed): "never editable" must also hold in trusted contexts (SQL editor, migrations,
+-- service_role API key), where profiles_guard skips its checks → trigger profiles_public_id_immutable.
 reset role;
 set local request.jwt.claim.sub = '';
-select todo('BUG-1: public_id can still be rewritten from trusted contexts (owner / service_role)', 2);
 select throws_ok($$ update public.profiles set public_id = 5000 where id = '00000000-0000-4000-9000-0000000000e4' $$,
   'P0001', null, 'ID: public_id is immutable even for the project owner (SQL editor)');
 set local request.jwt.claim.role = 'service_role';
@@ -232,26 +229,25 @@ select throws_ok($$ update public.profiles set public_id = 5001 where id = '0000
   'P0001', null, 'ID: public_id is immutable even for service_role');
 reset role;
 set local request.jwt.claim.role = '';
--- Undo whatever BUG-1 let through (no-op once fixed: the WHERE matches no row).
-update public.profiles set public_id = 103
- where id = '00000000-0000-4000-9000-0000000000e4' and public_id <> 103;
-
--- BUG-2: upsert_my_profile swallows ANY unique_violation (meant for the "two tabs, same user"
--- race on the primary key). A collision on profiles_public_id_key therefore returns an all-NULL
--- row with HTTP 200 and creates nothing — and because the counter increment is rolled back with
--- it, every later sign-up hits the same number: sign-ups stop silently. Simulated here by the
--- counter falling one behind (manual edit / restore); BUG-1 is another way to get there.
+-- BUG-2 (fixed): a counter that fell behind (manual edit / partial restore) used to make the next
+-- sign-up collide on profiles_public_id_key, and upsert_my_profile swallowed that as an empty row
+-- (sign-ups stopped silently). Now the counter heals itself (max + 1) and only the same-user
+-- primary-key race is absorbed.
 update private.public_id_counter set last_value = last_value - 1;
 set local request.jwt.claim.sub = '00000000-0000-4000-9000-0000000000e1';
 set local role authenticated;
-select todo('BUG-2: a public_id collision is swallowed by upsert_my_profile (returns an empty row)', 1);
-select throws_ok($$ select public.upsert_my_profile('Collision', 'student') $$,
-  '23505', null, 'ID: a public_id collision raises instead of returning an empty profile');
+select lives_ok($$ select public.upsert_my_profile('Collision', 'student') $$,
+  'ID: a sign-up after the counter fell behind succeeds');
 reset role;
 set local request.jwt.claim.sub = '';
-update private.public_id_counter set last_value = last_value + 1;
-select is((select count(*)::integer from public.profiles where id = '00000000-0000-4000-9000-0000000000e1'), 0,
-  'ID: (BUG-2 cleanup) no profile was created for the colliding sign-up');
+select is((select public_id from public.profiles where id = '00000000-0000-4000-9000-0000000000e1'),
+          (select max(public_id) from public.profiles),
+  'ID: ... with the next free number (max + 1), no collision');
+select is((select last_value from private.public_id_counter), (select max(public_id) from public.profiles),
+  'ID: ... and the counter is back in line');
+-- Restore the fixtures (no profile for W, counter as before) for the rest of the file.
+delete from public.profiles where id = '00000000-0000-4000-9000-0000000000e1';
+update private.public_id_counter set last_value = last_value - 1;
 
 -- =============================================================================
 -- 2. Directory: search_profiles / lookup_profile_by_public_id   (caller: X, a student)
@@ -634,19 +630,23 @@ set local role authenticated;
 select lives_ok($$ select public.delete_group((select id from dir_test.refs where label = 'g1')) $$, 'a platform admin deletes the group');
 select is((select count(*)::integer from public.conversations where id = (select id from dir_test.refs where label = 'g1')), 0, '... it is gone');
 
--- allow_leave = false: blocks plain members only; last member leaving deletes the group.
+-- allow_leave = false: only platform admins create such groups (nobody can trap others in a group);
+-- it blocks plain members only; the last member leaving deletes the group.
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-9000-0000000000c2';
 set local role authenticated;
-select lives_ok($$ insert into dir_test.refs (label, id)
-                   select 'g2', public.create_group('Sem saída', array[(select public_id from dir_test.refs where label = 'r')], false) $$,
-  'allow_leave=false group created');
+select throws_ok($$ select public.create_group('Sem saída', array[(select public_id from dir_test.refs where label = 'r')], false) $$,
+  'P0001', 'not_allowed', 'allow_leave=false: a regular user cannot create a group nobody can leave');
 
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-9000-0000000000a1';
 set local role authenticated;
-select lives_ok($$ select public.add_group_member((select id from dir_test.refs where label = 'g2'), (select public_id from dir_test.refs where label = 'ad')) $$,
-  'platform admin joins as a plain member');
+select lives_ok($$ insert into dir_test.refs (label, id)
+                   select 'g2', public.create_group('Sem saída', array[(select public_id from dir_test.refs where label = 'm'),
+                                                                     (select public_id from dir_test.refs where label = 'r')], false) $$,
+  'allow_leave=false group created by a platform admin');
+select lives_ok($$ select public.set_group_member_role((select id from dir_test.refs where label = 'g2'), '00000000-0000-4000-9000-0000000000c2', 'manager') $$,
+  'the platform admin makes M a group administrator');
 select lives_ok($$ select public.leave_group((select id from dir_test.refs where label = 'g2')) $$,
   'allow_leave=false: platform admins can still leave');
 
@@ -675,19 +675,17 @@ set local request.jwt.claim.sub = '';
 select is((select count(*)::integer from public.conversations where id = (select id from dir_test.refs where label = 'g2')), 0,
   'the last member leaving deletes the group');
 
--- BUG-3: the "a group always keeps a manager" invariant is only enforced inside the RPCs.
--- Deleting the last manager's account (auth.users → profiles → conversation_members cascade)
--- leaves a group with members and no manager (only platform admins can manage it; with
--- allow_leave = false its members are stuck).
+-- BUG-3 (fixed): the "a group always keeps a manager" invariant must also hold when the last
+-- manager's ACCOUNT is deleted (auth.users → profiles → conversation_members cascade), not only
+-- inside the RPCs → trigger conversation_members_after_delete.
 set local request.jwt.claim.sub = '00000000-0000-4000-a000-000000000002';
 set local role authenticated;
 select lives_ok($$ insert into dir_test.refs (label, id)
-                   select 'g3', public.create_group('Grupo órfão', array[(select public_id from dir_test.refs where label = 'b3')], false) $$,
+                   select 'g3', public.create_group('Grupo órfão', array[(select public_id from dir_test.refs where label = 'b3')]) $$,
   'B2 creates a group with B3');
 reset role;
 set local request.jwt.claim.sub = '';
 delete from auth.users where id = '00000000-0000-4000-a000-000000000002';
-select todo('BUG-3: deleting the last manager''s account leaves the group without a manager', 1);
 select is((select count(*)::integer from public.conversation_members
             where conversation_id = (select id from dir_test.refs where label = 'g3') and member_role = 'manager'), 1,
   'deleting the last manager''s account promotes the next member');
@@ -863,17 +861,26 @@ select throws_ok($$ insert into storage.objects (bucket_id, name, owner_id)
                             '00000000-0000-4000-9000-0000000000c1') $$,
   '42501', null, 'upload limit: the 31st upload in 24 h is refused (policy)');
 
--- BUG-4: the limit counts the objects that still EXIST, and users may delete their avatars
--- (avatars_delete_manageable): upload → delete loops bypass "30 uploads / 24 h".
+-- BUG-4 (fixed): the limit counts the objects of the last 24 h, so deleting them must not reset it:
+-- owners may only delete photos older than 24 h.
 set local storage.allow_delete_query = 'true';  -- what the Storage API does for DELETE /object
 delete from storage.objects where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1';
 set local storage.allow_delete_query = 'false';
-select is((select count(*)::integer from storage.objects where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1'), 0,
-  'avatars: a user can delete their own avatar objects');
-select todo('BUG-4: deleting uploads resets the 30/day avatar upload limit', 1);
+select is((select count(*)::integer from storage.objects where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1'), 30,
+  'avatars: photos uploaded in the last 24 h cannot be deleted by their owner');
 select ok(not private.can_upload_avatar('users/00000000-0000-4000-9000-0000000000c1/33333333-3333-4333-8333-333333333333.webp',
                                         '00000000-0000-4000-9000-0000000000c1'),
-  'upload limit: still refused after deleting the uploaded objects');
+  'upload limit: still refused after trying to delete the uploaded objects');
+reset role;
+set local request.jwt.claim.sub = '';
+update storage.objects set created_at = now() - interval '2 days' where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1';
+set local request.jwt.claim.sub = '00000000-0000-4000-9000-0000000000c1';
+set local role authenticated;
+set local storage.allow_delete_query = 'true';
+delete from storage.objects where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1';
+set local storage.allow_delete_query = 'false';
+select is((select count(*)::integer from storage.objects where bucket_id = 'avatars' and owner_id = '00000000-0000-4000-9000-0000000000c1'), 0,
+  'avatars: photos older than 24 h can be deleted by their owner (e.g. the previous photo)');
 
 reset role;
 set local request.jwt.claim.sub = '';
