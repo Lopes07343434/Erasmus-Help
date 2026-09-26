@@ -134,6 +134,8 @@ export interface FakeSupabase {
   storage: {
     upload: ReturnType<typeof vi.fn<(path: string, body: Blob, opts?: unknown) => Promise<FakeResult>>>
     createSignedUrl: ReturnType<typeof vi.fn<(path: string, expiresIn: number) => Promise<FakeResult>>>
+    remove: ReturnType<typeof vi.fn<(paths: string[]) => Promise<FakeResult>>>
+    getPublicUrl: ReturnType<typeof vi.fn<(path: string) => { data: { publicUrl: string } }>>
     buckets: string[]
   }
   auth: {
@@ -167,7 +169,12 @@ export function createFakeSupabase(): FakeSupabase {
     fake.calls.push(`sign:${path}`)
     return Promise.resolve(ok({ signedUrl: `https://example.test/signed/${path}?e=${expiresIn}` }))
   })
-  fake.storage = { upload, createSignedUrl, buckets: [] }
+  const remove = vi.fn((paths: string[]) => {
+    for (const p of paths) fake.calls.push(`remove:${p}`)
+    return Promise.resolve(ok(paths.map((name) => ({ name }))))
+  })
+  const getPublicUrl = vi.fn((path: string) => ({ data: { publicUrl: `https://example.test/public/${path}` } }))
+  fake.storage = { upload, createSignedUrl, remove, getPublicUrl, buckets: [] }
 
   const auth: FakeSupabase['auth'] = {
     session: null,
@@ -205,7 +212,7 @@ export function createFakeSupabase(): FakeSupabase {
     storage: {
       from: (bucket: string) => {
         fake.storage.buckets.push(bucket)
-        return { upload, createSignedUrl }
+        return { upload, createSignedUrl, remove, getPublicUrl }
       },
     },
     auth: {
