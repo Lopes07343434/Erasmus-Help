@@ -46,6 +46,18 @@ export function ChatNotificationsBridge({ activeConversationId }: { activeConver
     pathnameRef.current = pathname
   }, [pathname])
 
+  // A click on a system notification shown by the service worker (public/sw-notifications.js) opens that conversation here.
+  useEffect(() => {
+    const sw = typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker : null
+    if (typeof sw?.addEventListener !== 'function') return
+    const onMessage = (event: MessageEvent<unknown>) => {
+      const data = event.data as { type?: unknown; url?: unknown } | null
+      if (data?.type === 'eh:open-url' && typeof data.url === 'string' && /^\/chat(?:\/[A-Za-z0-9-]+)?$/.test(data.url)) void navigate(data.url)
+    }
+    sw.addEventListener('message', onMessage)
+    return () => sw.removeEventListener('message', onMessage)
+  }, [navigate])
+
   // Only once the list is known (not while connecting/offline): otherwise the badge would blink to 0 on every start.
   useEffect(() => {
     if (session.status === 'ready') updateAppBadge(unreadTotal)

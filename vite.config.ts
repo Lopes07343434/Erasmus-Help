@@ -56,6 +56,8 @@ export default defineConfig({
         // Updates still wait for the user because skipWaiting stays off in 'prompt' mode.
         clientsClaim: true,
         disableDevLogs: true,
+        // Opens the conversation when a chat notification is clicked (public/sw-notifications.js).
+        importScripts: ['/sw-notifications.js'],
         // Only these third-party GETs are cached. Our backend (VITE_API_BASE_URL: translation/AI) has
         // NO route on purpose: the service worker never intercepts it, so private responses are never cached.
         runtimeCaching: [

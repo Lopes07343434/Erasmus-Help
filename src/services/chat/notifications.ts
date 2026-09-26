@@ -1,7 +1,7 @@
 /**
- * In-app notices for incoming messages (toast/banner). Built from a Realtime message:
- * never for my own messages, never for the conversation that is open, never for conversations
- * I am not a member of (admins receive every message through Realtime).
+ * In-app notices for incoming messages (toast/banner, and system notifications while the app is hidden). Built from
+ * a Realtime message: never for my own messages, never for the conversation that is open on screen (it is notified
+ * when the page is hidden), never for conversations I am not a member of (admins receive every message through Realtime).
  */
 import type { IncomingMessageNotice } from './api'
 import { useChatStore } from './chatStore'
@@ -11,10 +11,15 @@ import type { ChatMessage, ConversationSummary } from './types'
 
 const get = useChatStore.getState
 
+const pageHidden = (): boolean => typeof document !== 'undefined' && document.visibilityState === 'hidden'
+
 function isSuppressed(msg: ChatMessage, activeConversationId: string | null): boolean {
   const s = get()
   const me = s.session.userId
-  return !me || msg.senderId === me || msg.conversationId === activeConversationId || msg.conversationId === s.activeConversationId
+  if (!me || msg.senderId === me) return true
+  // The open conversation needs no notice while it is on screen — but it does in a background tab (system notification).
+  if (pageHidden()) return false
+  return msg.conversationId === activeConversationId || msg.conversationId === s.activeConversationId
 }
 
 export async function buildIncomingNotice(msg: ChatMessage, activeConversationId: string | null): Promise<IncomingMessageNotice | null> {

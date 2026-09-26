@@ -160,6 +160,20 @@ describe('ChatNotificationsBridge', () => {
       )
       expect(FakeNotification.shown).toHaveLength(0)
     })
+
+    it('opens the conversation when the service worker reports a notification click', async () => {
+      const sw = Object.assign(new EventTarget(), { getRegistration: () => Promise.resolve(undefined) })
+      defineOnNavigator('serviceWorker', sw)
+      renderBridge('/')
+      act(() => {
+        sw.dispatchEvent(new MessageEvent('message', { data: { type: 'eh:open-url', url: 'https://evil.test/x' } }))
+      })
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/)
+      act(() => {
+        sw.dispatchEvent(new MessageEvent('message', { data: { type: 'eh:open-url', url: '/chat/g1' } }))
+      })
+      await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/chat/g1'))
+    })
   })
 
   it('keeps the app icon badge in sync with the unread total once the chat is ready', () => {

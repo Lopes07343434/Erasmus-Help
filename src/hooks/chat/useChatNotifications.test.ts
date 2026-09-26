@@ -87,6 +87,18 @@ describe('useChatNotifications', () => {
     await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
   })
 
+  it('notifies the open conversation too while the page is hidden (background tab)', async () => {
+    const { onNotice } = mount(DIRECT)
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    try {
+      act(() => fake.lastChannel().emit('messages', 'INSERT', textRow(uid(7), DIRECT, OTHER, ts(11))))
+      await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
+      expect(onNotice.mock.calls[0]?.[0]).toMatchObject({ conversationId: DIRECT })
+    } finally {
+      visibility.mockRestore()
+    }
+  })
+
   it('stops after unmount', async () => {
     const { onNotice, hook } = mount()
     hook.unmount()
