@@ -15,8 +15,9 @@ import { AdminUserSheet } from './components/AdminUserSheet'
 import { AssignMonitorCard } from './components/AssignMonitorCard'
 
 /**
- * /admin — chat administration (reached from Definições, admins only): search users; verify monitors, "pode gerir
- * grupos", role student ↔ monitor, and a student's monitor. The server enforces admin rights; others see "Sem acesso".
+ * /admin — chat administration (reached from Definições, admins only): search users; verify monitors, role
+ * student ↔ monitor, and a student's monitor. Group rights are per group (its administrators), not set here.
+ * The server enforces admin rights; others see "Sem acesso".
  */
 export default function AdminPage() {
   const { t } = useI18n()
@@ -44,7 +45,7 @@ function UserRow({ user, onOpen }: { user: AdminUserRow; onOpen: () => void }) {
   const { t } = useI18n()
   return (
     <ListRow
-      leading={<ChatAvatar name={user.displayName} size={40} />}
+      leading={<ChatAvatar name={user.displayName} photo={user.avatarPath} size={40} />}
       label={
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="break-words">{user.displayName}</span>
@@ -59,7 +60,6 @@ function UserRow({ user, onOpen }: { user: AdminUserRow; onOpen: () => void }) {
               {t(user.monitorStatus === 'verified' ? 'chat.admin.status.verified' : 'chat.admin.status.pending')}
             </MiniPill>
           ) : null}
-          {user.role === 'monitor' && user.canManageGroups ? <MiniPill tone="primary">{t('chat.admin.groupsPill')}</MiniPill> : null}
           {user.role === 'student' ? (
             <span>{user.monitor ? t('chat.admin.monitorOf', { name: `${user.monitor.displayName} (${publicIdLabel(user.monitor.publicId)})` }) : t('chat.admin.noMonitor')}</span>
           ) : null}

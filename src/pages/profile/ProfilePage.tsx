@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Copy, Flag, Globe, GraduationCap, IdCard, MapPin, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { Flag, Globe, GraduationCap, MapPin, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { Button, ListRow, ListSection, PageHeader, useToast } from '@/components/ui'
-import { useChatSession } from '@/hooks/chat'
+import { useChatSession, useProfileActions } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
+import { chatErrorMessage } from '@/pages/chat/chatErrors'
 import { publicIdLabel } from '@/pages/chat/chatFormat'
 import { useCopyToClipboard } from '@/pages/chat/chatHooks'
+import { PhotoSheet } from '@/pages/chat/components/PhotoSheet'
 import { CountrySheet } from '@/pages/onboarding/components/CountrySheet'
 import { ROLE_ICONS } from '@/pages/onboarding/components/roleIcons'
 import { countryFlag, getCountryName } from '@/services/geo'
@@ -15,11 +17,15 @@ import { NameSheet } from './components/NameSheet'
 import { CitySheet, DeleteDataSheet, MyLanguageSheet, PrivacySheet, RoleSheet } from './components/ProfileSheets'
 import { useDeleteDeviceData } from './useDeleteDeviceData'
 
-type ProfileSheet = 'name' | 'role' | 'myLanguage' | 'country' | 'city' | 'privacy' | 'delete'
+type ProfileSheet = 'photo' | 'name' | 'role' | 'myLanguage' | 'country' | 'city' | 'privacy' | 'delete'
 
-/** /profile — "Perfil": identity card, editable details, privacy info and "delete data from this device". */
+/**
+ * /profile — "Perfil": identity card (photo, name, type, chat ID with "Copiar ID"), editable details, privacy info
+ * and "delete data from this device".
+ */
 export default function ProfilePage() {
-  const { t, locale, languageName } = useI18n()
+  const i18n = useI18n()
+  const { t, locale, languageName } = i18n
   const toast = useToast()
   const name = useProfileStore((s) => s.name)
   const role = useProfileStore((s) => s.role)
@@ -30,9 +36,14 @@ export default function ProfilePage() {
   const setMyLanguage = useProfileStore((s) => s.setMyLanguage)
   const setLocation = useProfileStore((s) => s.setLocation)
   const deleteDeviceData = useDeleteDeviceData()
-  const chatMe = useChatSession().me
+  const chatSession = useChatSession()
+  const chatMe = chatSession.me
+  const profileActions = useProfileActions()
   const copy = useCopyToClipboard()
   const chatId = chatMe ? publicIdLabel(chatMe.publicId) : ''
+  // Photos live in the chat account: none in a build without chat; disabled (with a note) until it is connected.
+  const photoAvailable = chatSession.status !== 'not-configured'
+  const photoReady = chatSession.status === 'ready' && chatMe !== null
 
   const [sheet, setSheet] = useState<ProfileSheet | null>(null)
   /** Country picked in the country sheet, waiting for a city before the location is saved. */
@@ -63,17 +74,27 @@ export default function ProfilePage() {
   const notSet = t('profile.fields.notSet')
   const RoleIcon = role ? ROLE_ICONS[role] : GraduationCap
   const cityCountry = pendingCountry ?? location?.countryCode ?? null
+  // Once the Chat account exists the server role is authoritative (changes go through an admin).
+  const roleLabel = chatMe ? t(`chat.roles.${chatMe.role}`) : role ? t(`common.roles.${role}`) : null
+  const photo = chatMe?.avatarPath ?? null
 
   return (
     <div className="flex flex-col gap-[22px]">
       <PageHeader title={t('profile.title')} />
-      <IdentityCard name={name} role={role} location={location} />
+      <IdentityCard
+        name={name}
+        roleLabel={roleLabel}
+        location={location}
+        photo={photo}
+        onEditPhoto={photoAvailable ? () => setSheet('photo') : undefined}
+        publicId={chatId || null}
+        onCopyId={(id) => void copy(id)}
+      />
 
       <ListSection title={t('profile.sections.data')}>
         <ListRow icon={UserRound} label={t('profile.fields.name')} value={name || notSet} onClick={() => setSheet('name')} />
         {chatMe ? (
-          // Once the Chat account exists the server role is authoritative (changes go through an admin).
-          <ListRow icon={RoleIcon} label={t('profile.fields.role')} value={t(`chat.roles.${chatMe.role}`)} description={t('profile.fields.roleLocked')} />
+          <ListRow icon={RoleIcon} label={t('profile.fields.role')} value={roleLabel} description={t('profile.fields.roleLocked')} />
         ) : (
           <ListRow icon={RoleIcon} label={t('profile.fields.role')} value={role ? t(`common.roles.${role}`) : notSet} onClick={() => setSheet('role')} />
         )}
@@ -97,24 +118,6 @@ export default function ProfilePage() {
         />
       </ListSection>
 
-      {chatId ? (
-        <ListSection title={t('chat.id.yours')}>
-          <ListRow
-            icon={IdCard}
-            label={<span className="font-mono text-base font-medium text-primary">{chatId}</span>}
-            description={t('chat.id.hint')}
-            trailing={
-              <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
-                <Copy size={15} aria-hidden="true" />
-                {t('chat.id.copy')}
-              </span>
-            }
-            aria-label={t('chat.id.copyAria', { id: chatId })}
-            onClick={() => void copy(chatId)}
-          />
-        </ListSection>
-      ) : null}
-
       <ListSection title={t('profile.sections.privacy')}>
         <ListRow icon={ShieldCheck} label={t('profile.privacy.row')} onClick={() => setSheet('privacy')} />
       </ListSection>
@@ -123,6 +126,26 @@ export default function ProfilePage() {
         {t('profile.deleteData.action')}
       </Button>
 
+      <PhotoSheet
+        open={sheet === 'photo'}
+        onClose={close}
+        labels={{
+          title: t('profile.photo.menuTitle'),
+          choose: t('profile.photo.choose'),
+          remove: t('profile.photo.remove'),
+          saving: t('profile.photo.saving'),
+          invalid: t('profile.photo.invalid'),
+        }}
+        photo={photo}
+        name={name}
+        unavailable={photoReady ? null : t('profile.photo.unavailable')}
+        onSave={async (image) => {
+          await profileActions.setMyAvatar(image)
+          close()
+          toast.show(t(image ? 'profile.photo.updated' : 'profile.photo.removed'))
+        }}
+        errorMessage={(err) => chatErrorMessage(err, i18n)}
+      />
       <NameSheet
         open={sheet === 'name'}
         onClose={close}

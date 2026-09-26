@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { CircleAlert, GraduationCap, Save, ShieldCheck, UserMinus, Users } from 'lucide-react'
+import { CircleAlert, GraduationCap, Save, ShieldCheck, UserMinus } from 'lucide-react'
 import { Button, ListGroup, ListSectionTitle, ListSwitchRow, Sheet, TextField, useToast } from '@/components/ui'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { AdminUserRow, AdminUsersState } from '@/services/chat/api'
@@ -8,16 +8,16 @@ import { chatErrorMessage } from '@/pages/chat/chatErrors'
 import { publicIdLabel } from '@/pages/chat/chatFormat'
 import { PersonCard } from '@/pages/chat/components/IdLookup'
 
-type Action = 'verify' | 'groups' | 'role' | 'monitor' | 'removeMonitor'
+type Action = 'verify' | 'role' | 'monitor' | 'removeMonitor'
 
 interface AdminUserSheetProps {
   /** Open while a user is selected. */
   user: AdminUserRow | null
   onClose: () => void
-  admin: Pick<AdminUsersState, 'verifyMonitor' | 'setCanManageGroups' | 'setRole' | 'setStudentMonitor'>
+  admin: Pick<AdminUsersState, 'verifyMonitor' | 'setRole' | 'setStudentMonitor'>
 }
 
-/** Actions on one user: monitors (verified, can manage groups), role student ↔ monitor, a student's monitor. */
+/** Actions on one user: monitor verification, role student ↔ monitor, a student's monitor. */
 export function AdminUserSheet({ user, onClose, admin }: AdminUserSheetProps) {
   return (
     <Sheet open={user !== null} onClose={onClose} title={user?.displayName ?? ''}>
@@ -82,14 +82,6 @@ function AdminUserActions({ user, admin }: { user: AdminUserRow; admin: AdminUse
             checked={user.monitorStatus === 'verified'}
             disabled={busy !== null}
             onCheckedChange={(value) => void run('verify', () => admin.verifyMonitor(user.id, value))}
-          />
-          <ListSwitchRow
-            icon={Users}
-            label={t('chat.admin.canManageGroups')}
-            description={t('chat.admin.canManageGroupsHint')}
-            checked={user.canManageGroups}
-            disabled={busy !== null}
-            onCheckedChange={(value) => void run('groups', () => admin.setCanManageGroups(user.id, value))}
           />
         </ListGroup>
       ) : (

@@ -7,13 +7,14 @@ import { unsubscribeFromPush } from '@/services/notifications'
 import { clearWeatherCache } from '@/services/weather'
 import { useProfileStore } from '@/stores/profileStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { updateAppBadge } from '@/pages/chat/components/systemNotifications'
 import { useTalkStore } from '@/pages/talk/talkStore'
 import { useLanguagePairStore } from '@/pages/translate/languagePair'
 
 /**
  * "Apagar dados deste dispositivo": removes the push subscription (best effort), signs out of the chat and drops its
  * local session/cache (best effort), resets and clears both persisted stores, drops the weather cache and the
- * geocoding memo, then restarts at /welcome.
+ * geocoding memo, clears the app icon badge, then restarts at /welcome.
  */
 export function useDeleteDeviceData(): () => void {
   const navigate = useNavigate()
@@ -31,6 +32,8 @@ export function useDeleteDeviceData(): () => void {
     useLanguagePairStore.setState(useLanguagePairStore.getInitialState(), true)
     clearWeatherCache()
     clearGeocodingMemo()
+    // The unread count on the app icon belonged to the chat account that was just signed out.
+    updateAppBadge(0)
     // Service-worker runtime caches hold location-derived responses (weather / city search).
     if (typeof caches !== 'undefined') {
       for (const name of ['eh-weather', 'eh-geocoding']) caches.delete(name).catch(() => undefined)

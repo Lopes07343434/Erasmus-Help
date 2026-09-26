@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n/I18nProvider'
 import type { ChatMessage, MessageStatus, PublicProfile } from '@/services/chat/types'
 import { audioLabel, formatMessageTime } from '../chatFormat'
 import { messageElementId } from '../chatPaths'
+import { publicIdNumber } from './groupMembers'
 import { RolePill } from './Pills'
 
 interface MessageBubbleProps {
@@ -13,7 +14,7 @@ interface MessageBubbleProps {
   mine: boolean
   /** Sender profile (incoming messages). */
   sender: PublicProfile | null
-  /** Groups: show the sender's name + role pill above incoming text. */
+  /** Groups: show the author ("Samuel Lopes · 15" + role pill) above incoming text (first of a run from the same person). */
   showSender: boolean
   onRetry: (messageId: string) => void
   onDiscard: (messageId: string) => void
@@ -25,7 +26,8 @@ const STATUS_ICONS: Record<MessageStatus, LucideIcon> = { sending: Clock, sent: 
 /**
  * One message, styled like the design's talk bubbles (radius 16, 10/14 padding, 15/1.4/500): mine on the right in
  * primary with white text, others on the left on a blurred surface. Time in every bubble; delivery state on mine
- * (clock → check → double check; failed → retry/discard). Memoized: callbacks must be stable.
+ * (clock → check → double check; failed → "Não foi possível enviar a mensagem." + retry/discard). Memoized: callbacks
+ * must be stable.
  */
 export const MessageBubble = memo(function MessageBubble({ message, mine, sender, showSender, onRetry, onDiscard, getAudioUrl }: MessageBubbleProps) {
   const i18n = useI18n()
@@ -33,6 +35,8 @@ export const MessageBubble = memo(function MessageBubble({ message, mine, sender
   const time = formatMessageTime(message.createdAt, i18n)
   const failed = mine && message.status === 'failed'
   const senderName = mine ? t('chat.conversation.you') : (sender?.displayName ?? t('chat.preview.someone'))
+  const senderId = sender ? publicIdNumber(sender.publicId) : ''
+  const author = senderId ? t('chat.conversation.senderWithId', { name: senderName, id: senderId }) : senderName
   const StatusIcon = STATUS_ICONS[message.status]
   const audioPath = message.kind === 'audio' ? message.audioPath : null
   const resolveAudio = useMemo(() => (audioPath ? () => getAudioUrl(audioPath) : null), [audioPath, getAudioUrl])
@@ -50,7 +54,7 @@ export const MessageBubble = memo(function MessageBubble({ message, mine, sender
       >
         {showSender && !mine ? (
           <p className="m-0 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-            <span dir="auto" className="min-w-0 text-[13px] leading-[1.3] font-bold break-words text-text2 [unicode-bidi:isolate]">{senderName}</span>
+            <span dir="auto" className="min-w-0 text-[13px] leading-[1.3] font-bold break-words text-text2 [unicode-bidi:isolate]">{author}</span>
             {sender ? <RolePill role={sender.role} /> : null}
           </p>
         ) : (
@@ -79,17 +83,19 @@ export const MessageBubble = memo(function MessageBubble({ message, mine, sender
       </div>
 
       {failed ? (
-        <div className="flex flex-wrap items-center justify-end gap-x-1 text-danger">
-          <span className="flex items-center gap-1 pr-1 text-xs font-semibold">
-            <CircleAlert size={14} aria-hidden="true" className="shrink-0" />
-            {t('chat.conversation.status.failed')}
-          </span>
-          <Button variant="ghost" size="sm" icon={RotateCw} onClick={() => onRetry(message.id)}>
-            {t('chat.conversation.retry')}
-          </Button>
-          <Button variant="dangerGhost" size="sm" icon={Trash2} onClick={() => onDiscard(message.id)}>
-            {t('chat.conversation.discard')}
-          </Button>
+        <div className="flex flex-col items-end text-danger">
+          <p className="m-0 max-w-[84%] pt-0.5 pr-1 text-right text-xs leading-[1.4] font-semibold text-pretty lg:max-w-[72%]">
+            <CircleAlert size={14} aria-hidden="true" className="mr-1 inline-block align-[-3px]" />
+            {t('chat.conversation.sendFailed')}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-x-1">
+            <Button variant="ghost" size="sm" icon={RotateCw} onClick={() => onRetry(message.id)}>
+              {t('chat.conversation.retry')}
+            </Button>
+            <Button variant="dangerGhost" size="sm" icon={Trash2} onClick={() => onDiscard(message.id)}>
+              {t('chat.conversation.discard')}
+            </Button>
+          </div>
         </div>
       ) : null}
     </li>
@@ -108,6 +114,7 @@ function sameBubble(a: MessageBubbleProps, b: MessageBubbleProps): boolean {
     a.getAudioUrl === b.getAudioUrl &&
     a.sender?.displayName === b.sender?.displayName &&
     a.sender?.role === b.sender?.role &&
+    a.sender?.publicId === b.sender?.publicId &&
     m.id === n.id &&
     m.status === n.status &&
     m.createdAt === n.createdAt &&
