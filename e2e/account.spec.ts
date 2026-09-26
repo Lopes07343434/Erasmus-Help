@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { newUser, shownId } from './support/app'
+import { contextOptions, newUser, shownId } from './support/app'
 
-test('creating an account gives a sequential, permanent public ID shown in the profile', async ({ browser }) => {
-  const first = await newUser(browser, { name: 'Conta Primeira', role: 'Aluno' })
-  const second = await newUser(browser, { name: 'Conta Segunda', role: 'Monitor' })
+test('creating an account gives a sequential, permanent public ID shown in the profile', async ({ browser }, testInfo) => {
+  const first = await newUser(browser, { name: 'Conta Primeira', role: 'Aluno' }, contextOptions(testInfo))
+  const second = await newUser(browser, { name: 'Conta Segunda', role: 'Monitor' }, contextOptions(testInfo))
 
   // Sequential and unique: the next account gets the next number.
   expect(second.publicId).toBe(first.publicId + 1)

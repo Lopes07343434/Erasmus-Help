@@ -1,4 +1,4 @@
-import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { expect, type Browser, type BrowserContext, type BrowserContextOptions, type Locator, type Page, type TestInfo } from '@playwright/test'
 
 /**
  * Helpers for the chat end-to-end tests. Everything goes through the real UI and the real local Supabase stack;
@@ -82,9 +82,15 @@ export async function readMyPublicId(page: Page): Promise<number> {
   return id
 }
 
+/** The project's context options (mobile / desktop), for contexts created outside the `page` fixture. */
+export function contextOptions(testInfo: TestInfo): BrowserContextOptions {
+  const { baseURL, locale, timezoneId, viewport, hasTouch } = testInfo.project.use
+  return { baseURL, locale, timezoneId, viewport, hasTouch }
+}
+
 /** A new person on their own device (separate browser context = separate anonymous chat account). */
-export async function newUser(browser: Browser, person: Person, viewport?: { width: number; height: number }): Promise<User> {
-  const context = await browser.newContext(viewport ? { viewport } : {})
+export async function newUser(browser: Browser, person: Person, options: BrowserContextOptions): Promise<User> {
+  const context = await browser.newContext(options)
   await stubThirdParties(context)
   const page = await context.newPage()
   const errors = collectErrors(page)
@@ -95,3 +101,19 @@ export async function newUser(browser: Browser, person: Person, viewport?: { wid
 
 /** "7" → "07", 15 → "15" (how the app shows IDs). */
 export const shownId = (n: number): string => String(n).padStart(2, '0')
+
+/** Message bubbles of the open conversation (each has id="msg-<uuid>"). */
+export const bubbles = (page: Page): Locator => page.locator('[id^="msg-"]')
+
+export const bubble = (page: Page, text: string): Locator => bubbles(page).filter({ hasText: text })
+
+/** Types in the composer and taps "Enviar mensagem" (on touch screens Enter adds a new line). */
+export async function sendMessage(page: Page, text: string): Promise<void> {
+  await page.getByRole('textbox', { name: 'Mensagem' }).fill(text)
+  await page.getByRole('button', { name: 'Enviar mensagem' }).click()
+  await expect(bubble(page, text)).toBeVisible()
+}
+
+/** A conversation / group row of the Chat list. */
+export const conversationRow = (page: Page, name: string | RegExp): Locator =>
+  page.getByRole('link', { name: typeof name === 'string' ? new RegExp(`^${name}`) : name })
