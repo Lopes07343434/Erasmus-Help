@@ -80,7 +80,8 @@ OWNERS="$(docker ps -aq | xargs -r docker inspect --format '{{.Name}} {{range $k
 # 3. Unpack the new release next to the previous ones.
 # -----------------------------------------------------------------------------
 # The static-server config is validated before anything changes.
-docker pull -q "$IMAGE" >/dev/null
+# Pull only when missing: a Docker Hub rate limit must never break a deploy.
+docker image inspect "$IMAGE" >/dev/null 2>&1 || docker pull -q "$IMAGE" >/dev/null || fail "could not pull $IMAGE. Nothing was changed."
 docker run --rm --network none -v "$HERE/Caddyfile:/etc/caddy/Caddyfile:ro" "$IMAGE" \
   caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 ||
   fail "deploy/Caddyfile is not valid. Nothing was changed."
@@ -119,10 +120,13 @@ if [[ "$PROXY" == traefik ]]; then
     --label "traefik.http.routers.$R-http.rule=Host(\`$DOMAIN\`)"
     --label "traefik.http.routers.$R-http.entrypoints=$EP_HTTP"
     --label "traefik.http.routers.$R-http.middlewares=$R-https"
+    --label "traefik.http.routers.$R-http.priority=1000"
     --label "traefik.http.routers.$R.rule=Host(\`$DOMAIN\`)"
     --label "traefik.http.routers.$R.entrypoints=$EP_HTTPS"
     --label "traefik.http.routers.$R.tls=true"
     --label "traefik.http.routers.$R.tls.certresolver=$RESOLVER"
+    # Explicit priority: the VPS answers unknown hosts with another site (catch-all); this exact Host rule must win.
+    --label "traefik.http.routers.$R.priority=1000"
     --label "traefik.http.services.$R.loadbalancer.server.port=80"
   )
 else
