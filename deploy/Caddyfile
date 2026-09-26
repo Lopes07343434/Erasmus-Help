@@ -1,0 +1,36 @@
+# Erasmus Help — static server INSIDE the app container (not a host proxy).
+# TLS, ports 80/443 and the domain are handled by the existing Coolify proxy, which routes
+# erasmus.help.pontodigital.eu to this container on the `coolify` Docker network (port 80).
+# /app is the deploy directory mounted read-only; /app/current → releases/<id> (switched atomically).
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:80 {
+	root * /app/current
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Hashed build output never changes; everything else (app shell, service worker, manifest,
+	# icons) is revalidated so a new release is picked up (the app shows its update prompt).
+	@immutable path /assets/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+	@revalidate not path /assets/*
+	header @revalidate Cache-Control "no-cache"
+
+	# SPA: app routes (/chat/…, /profile) get index.html; missing files (/x.png) stay 404.
+	@spa {
+		not file
+		not path_regexp \.[A-Za-z0-9]+$
+	}
+	rewrite @spa /index.html
+
+	file_server
+}
