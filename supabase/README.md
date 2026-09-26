@@ -10,7 +10,9 @@ Projeto: `https://nankvmfyyncoopoxqibm.supabase.co` (ref `nankvmfyyncoopoxqibm`)
 | `migrations/20260926090200_chat_rpc.sql` | RPCs (perfil, associação, grupos, leitura, admin) |
 | `migrations/20260926090300_chat_storage_realtime.sql` | bucket privado `chat-audio` + policies, publicação Realtime |
 | `apply_all.sql` | as 4 migrações pela ordem, numa única transação (gerado) |
-| `tests/chat_rls.test.sql` | testes pgTAP (82 asserções) |
+| `tests/chat_rls.test.sql` | testes pgTAP do chat (87 asserções) |
+| `tests/chat_directory.test.sql` | testes pgTAP da migração 5: IDs, diretório, grupos, avatares (244 asserções) |
+| `scripts/` | testes contra a stack local em execução: concorrência dos IDs, API HTTP (ver §6) |
 
 ## 1. Aplicar
 
@@ -83,7 +85,16 @@ Depois disso o admin verifica monitores (`admin_verify_monitor`) e dá permissã
 ## 6. Testes (pgTAP)
 
 Precisam de uma stack local (Docker): `npx supabase start` e depois `npx supabase test db`. Tudo corre numa transação com rollback.
-As policies de Storage são testadas através das funções exatas que elas usam (`private.can_upload_chat_audio` / `private.can_read_chat_audio`); o upload real deve ser verificado também no browser.
+As policies de Storage são testadas com INSERTs reais em `storage.objects` (RLS) e através das funções que elas usam (`private.can_upload_*` / `private.can_read_chat_audio`).
+`chat_directory.test.sql` começa com a tabela `profiles` vazia e o contador a 0 **dentro da transação** (IDs determinísticos 1..101); enquanto corre, os registos reais na mesma base esperam uns segundos pelo lock do contador.
+As asserções dentro de `todo(...)` documentam **bugs conhecidos** (comentários `BUG-n`): falham sem partir a execução; quando a correção entrar, o pgTAP avisa "unexpectedly succeeded" → retirar o `todo()`.
+
+Scripts contra a stack local em execução (só `127.0.0.1`/`localhost`; apagam os utilizadores que criam):
+```bash
+supabase/scripts/test_public_id_concurrency.sh 40   # N registos em paralelo (+ variante com ROLLBACK + "dois separadores"): IDs únicos e sem buracos
+node supabase/scripts/api_security_check.mjs        # 3 utilizadores anónimos via supabase-js: um estranho não lê/escreve nada de A–B (precisa de node_modules)
+```
+O script de concorrência usa `psql` (`DB_URL`, por omissão a base local) e no fim repõe o contador se ninguém mais se registou entretanto (`KEEP_COUNTER=1` para não repor). O script da API lê `API_URL`/`PUBLISHABLE_KEY`/`SECRET_KEY` do ambiente ou de `supabase status -o env` (`SUPABASE_BIN` para outro binário), gasta 3 sign-ins anónimos (limite local: 30/hora/IP) e 3 IDs públicos.
 
 ## 7. Tipos TypeScript
 
