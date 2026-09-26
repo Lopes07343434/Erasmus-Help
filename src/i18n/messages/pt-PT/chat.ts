@@ -47,19 +47,8 @@ export default {
   empty: {
     directTitle: 'Ainda não tens conversas.',
     directBody: 'Adiciona uma pessoa através do ID para começar.',
-    monitorTitle: 'Ainda não tens alunos',
-    monitorBody: 'Adiciona alunos com o ID que aparece no Perfil de cada um para começarem a conversar.',
     groupsTitle: 'Ainda não estás em nenhum grupo',
-    groupsBody: 'Quando te adicionarem a um grupo, ele aparece aqui.',
     groupsCreateBody: 'Cria um grupo para falares com várias pessoas ao mesmo tempo.',
-  },
-  noMonitor: {
-    title: 'Ainda não tens monitor',
-    body: 'O teu monitor vai adicionar-te através do teu ID. Partilha-o e a conversa aparece aqui.',
-  },
-  pending: {
-    title: 'Conta de monitor por verificar',
-    body: 'A tua conta de monitor aguarda a verificação de um administrador. Até lá, podes conversar nos grupos onde te adicionaram.',
   },
   id: {
     yours: 'O teu ID',
@@ -70,7 +59,6 @@ export default {
     hint: 'Partilha-o para que te possam adicionar no chat.',
   },
   actions: {
-    addStudent: 'Adicionar aluno',
     createGroup: 'Criar grupo',
     backToList: 'Voltar ao Chat',
     groupInfo: 'Informações do grupo',
@@ -194,14 +182,6 @@ export default {
     deselect: 'Tirar {name} da seleção',
     noneSelected: 'Ainda não escolheste ninguém. Também podes adicionar participantes mais tarde.',
   },
-  addStudent: {
-    title: 'Adicionar aluno',
-    body: 'Pede o ID à pessoa: aparece no Perfil e no Chat da app dela.',
-    idLabel: 'ID do aluno',
-    notStudent: 'Esse ID não é de uma conta de aluno.',
-    associate: 'Adicionar e abrir conversa',
-    associated: 'Conversa com {name} criada',
-  },
   search: {
     label: 'Pesquisar no chat',
     placeholder: 'Pesquisar por nome, ID ou grupo',
@@ -216,8 +196,12 @@ export default {
     error: 'Não foi possível pesquisar.',
     exact: 'ID exato',
     result: '{id} — {name} — {role}',
-    openChat: 'Conversar',
     openChatWith: 'Abrir conversa com {name}',
+    results: 'Resultados da pesquisa',
+    resultsCount_one: '{count} resultado',
+    resultsCount_few: '{count} resultados',
+    resultsCount_many: '{count} resultados',
+    resultsCount_other: '{count} resultados',
   },
   addPerson: {
     title: 'Adicionar pessoa',
