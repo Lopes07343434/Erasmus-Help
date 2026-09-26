@@ -95,8 +95,8 @@ export function rememberProfiles(profiles: readonly PublicProfile[]): void {
     const next = { ...s.profiles }
     for (const p of profiles) {
       const cur = next[p.id]
-      if (!cur || cur.displayName !== p.displayName || cur.role !== p.role || cur.publicId !== p.publicId) {
-        next[p.id] = { id: p.id, publicId: p.publicId, displayName: p.displayName, role: p.role }
+      if (!cur || cur.displayName !== p.displayName || cur.role !== p.role || cur.publicId !== p.publicId || cur.avatarPath !== p.avatarPath) {
+        next[p.id] = { id: p.id, publicId: p.publicId, displayName: p.displayName, role: p.role, avatarPath: p.avatarPath }
         changed = true
       }
     }
@@ -168,6 +168,7 @@ export function applyConversationUpdate(row: ConversationRowUpdate): boolean {
   const lastMessageAt = !row.lastMessageAt ? cur.lastMessageAt : !cur.lastMessageAt || compareTimestamps(row.lastMessageAt, cur.lastMessageAt) > 0 ? row.lastMessageAt : cur.lastMessageAt
   patchConversation(row.id, {
     name: cur.kind === 'group' ? (row.name ?? cur.name) : null,
+    avatarPath: cur.kind === 'group' && row.avatarPath !== undefined ? row.avatarPath : cur.avatarPath,
     allowLeave: row.allowLeave ?? cur.allowLeave,
     archivedAt: row.archivedAt,
     lastMessageAt,

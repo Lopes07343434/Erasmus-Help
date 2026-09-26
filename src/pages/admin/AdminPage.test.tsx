@@ -12,8 +12,9 @@ import AdminPage from './AdminPage'
 
 vi.mock('@/hooks/chat', async () => (await import('@/pages/chat/testFixtures')).chatHooksMock)
 
-const pendingMonitor: AdminUserRow = { id: 'u-m2', publicId: 4, displayName: 'Marta Reis', role: 'monitor', monitorStatus: 'pending', canManageGroups: false, monitor: null }
-const student: AdminUserRow = { id: 'u-s', publicId: 12, displayName: 'Ana Costa', role: 'student', monitorStatus: null, canManageGroups: false, monitor: MONITOR }
+// canManageGroups no longer means anything (group rights are per group): even `true` shows nothing.
+const pendingMonitor: AdminUserRow = { id: 'u-m2', publicId: 4, displayName: 'Marta Reis', role: 'monitor', avatarPath: null, monitorStatus: 'pending', canManageGroups: true, monitor: null }
+const student: AdminUserRow = { id: 'u-s', publicId: 12, displayName: 'Ana Costa', role: 'student', avatarPath: null, monitorStatus: null, canManageGroups: false, monitor: MONITOR }
 
 function renderAdmin() {
   return render(
@@ -50,13 +51,16 @@ describe('AdminPage', () => {
     renderAdmin()
 
     expect(screen.getByText('Por verificar')).toBeInTheDocument()
-    expect(screen.getByText('Monitor: João Pereira (ID 03)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Marta Reis/ })).not.toHaveTextContent(/grupos/i)
+    expect(screen.getByText('Monitor: João Pereira (ID: 03)')).toBeInTheDocument()
 
     await user.type(screen.getByRole('searchbox', { name: 'Pesquisar utilizadores' }), 'Marta')
     expect(admin.search).toHaveBeenLastCalledWith('Marta')
 
     await user.click(screen.getByRole('button', { name: /Marta Reis/ }))
     const sheet = screen.getByRole('dialog', { name: 'Marta Reis' })
+    // Only the verification switch: no "Pode gerir grupos".
+    expect(within(sheet).getAllByRole('switch')).toHaveLength(1)
     await user.click(within(sheet).getByRole('switch', { name: /Conta de monitor verificada/ }))
     expect(admin.verifyMonitor).toHaveBeenCalledWith('u-m2', true)
     await user.click(within(sheet).getByRole('button', { name: 'Mudar para aluno' }))

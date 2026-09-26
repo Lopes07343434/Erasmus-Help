@@ -4,17 +4,20 @@
 //   import { chatMock, … } from '@/pages/chat/testFixtures'
 import { useSyncExternalStore } from 'react'
 import { vi } from 'vitest'
+import { searchableQuery } from '@/services/chat/mappers'
 import type {
   AdminUsersState,
   ChatSession,
   ConversationState,
   ConversationsState,
+  DirectChatActions,
   GroupActions,
   IncomingMessageNotice,
-  StudentAssociation,
+  PeopleSearchState,
+  ProfileActions,
   UnreadCounts,
 } from '@/services/chat/api'
-import type { ChatMessage, ConversationKind, ConversationSummary, GroupMember, MyProfile, PublicProfile } from '@/services/chat/types'
+import { isPublicIdQuery, parsePublicId, type ChatMessage, type ConversationKind, type ConversationSummary, type GroupMember, type MyProfile, type PersonSearchResult, type PublicProfile } from '@/services/chat/types'
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
@@ -32,13 +35,20 @@ export function makeMe(patch: Partial<MyProfile> = {}): MyProfile {
     appLanguage: 'pt-PT',
     countryCode: 'IT',
     city: 'Milano',
+    avatarPath: null,
     createdAt: T0,
     updatedAt: T0,
     ...patch,
   }
 }
 
-export const person = (id: string, publicId: number, displayName: string, role: PublicProfile['role']): PublicProfile => ({ id, publicId, displayName, role })
+export const person = (id: string, publicId: number, displayName: string, role: PublicProfile['role'], avatarPath: string | null = null): PublicProfile => ({
+  id,
+  publicId,
+  displayName,
+  role,
+  avatarPath,
+})
 
 export const MONITOR = person('u-mon', 3, 'João Pereira', 'monitor')
 export const STUDENT_ANA = person('u-ana', 12, 'Ana Costa', 'student')
@@ -48,6 +58,7 @@ export function makeDirect(patch: Partial<ConversationSummary> = {}): Conversati
     id: 'c-direct',
     kind: 'direct',
     name: null,
+    avatarPath: null,
     allowLeave: false,
     archivedAt: null,
     myRole: 'member',
@@ -66,6 +77,7 @@ export function makeGroup(patch: Partial<ConversationSummary> = {}): Conversatio
     id: 'c-group',
     kind: 'group',
     name: 'Erasmus Milão',
+    avatarPath: null,
     allowLeave: true,
     archivedAt: null,
     myRole: 'member',
@@ -95,6 +107,26 @@ export interface ChatMockState {
   conversation: ConversationState
   unread: UnreadCounts
   admin: AdminUsersState
+  /** People the mocked usePeopleSearch finds (by ID prefix / name, like search_profiles). */
+  directory: PublicProfile[]
+  /** Forces the people search state (e.g. 'loading' / 'error'); null = derive it from `directory`. */
+  peopleSearch: Omit<PeopleSearchState, 'retry'> | null
+}
+
+/** Mocked search_profiles: exact ID first, then IDs starting with the digits; or names containing the text. */
+export function searchDirectory(directory: readonly PublicProfile[], query: string): PersonSearchResult[] {
+  const q = searchableQuery(query)
+  if (!q) return []
+  if (isPublicIdQuery(q)) {
+    const n = parsePublicId(q) ?? 0
+    const digits = String(n)
+    return directory
+      .filter((p) => p.publicId === n || String(p.publicId).startsWith(digits))
+      .map((p) => ({ ...p, exactIdMatch: p.publicId === n }))
+      .sort((a, b) => Number(b.exactIdMatch) - Number(a.exactIdMatch) || String(a.publicId).length - String(b.publicId).length || a.publicId - b.publicId)
+  }
+  const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  return directory.filter((p) => fold(p.displayName).includes(fold(q))).map((p) => ({ ...p, exactIdMatch: false }))
 }
 
 export const readySession = (me: MyProfile): ChatSession => ({ status: 'ready', me, error: null, retry: vi.fn() })
@@ -134,7 +166,6 @@ export const adminState = (patch: Partial<AdminUsersState> = {}): AdminUsersStat
   error: null,
   search: vi.fn(),
   verifyMonitor: vi.fn(() => Promise.resolve()),
-  setCanManageGroups: vi.fn(() => Promise.resolve()),
   setRole: vi.fn(() => Promise.resolve()),
   setStudentMonitor: vi.fn(() => Promise.resolve()),
   ...patch,
@@ -147,6 +178,8 @@ function initialState(): ChatMockState {
     conversation: conversationState(),
     unread: { total: 0, direct: 0, groups: 0 },
     admin: adminState(),
+    directory: [],
+    peopleSearch: null,
   }
 }
 
@@ -160,15 +193,20 @@ export const groupActions = {
   deleteGroup: vi.fn((_id: string) => Promise.resolve()),
   addMember: vi.fn((_id: string, _publicId: number, _asManager?: boolean) => Promise.resolve()),
   removeMember: vi.fn((_id: string, _userId: string) => Promise.resolve()),
+  setMemberRole: vi.fn((_id: string, _userId: string, _role: 'member' | 'manager') => Promise.resolve()),
+  setGroupAvatar: vi.fn((_id: string, _image: Blob | null) => Promise.resolve()),
   leaveGroup: vi.fn((_id: string) => Promise.resolve()),
-  lookupByPublicId: vi.fn((_publicId: number) => Promise.resolve(STUDENT_ANA)),
 } satisfies GroupActions
 
-export const studentAssociation = {
-  associateStudent: vi.fn((_publicId: number) => Promise.resolve('c-new')),
-  removeAssociation: vi.fn((_studentId: string) => Promise.resolve()),
-  lookupStudent: vi.fn((_publicId: number) => Promise.resolve(STUDENT_ANA)),
-} satisfies StudentAssociation
+export const directChats = {
+  startDirectConversation: vi.fn((_publicId: number) => Promise.resolve('c-new')),
+} satisfies DirectChatActions
+
+export const profileActions = {
+  setMyAvatar: vi.fn((_image: Blob | null) => Promise.resolve()),
+} satisfies ProfileActions
+
+export const peopleSearchRetry = vi.fn()
 
 /** Last `onNotice` given to useChatNotifications, and the active conversation it was given. */
 export const notifications = {
@@ -186,7 +224,7 @@ export const chatMock = {
     state = initialState()
     notifications.onNotice = null
     notifications.activeConversationId = null
-    for (const fn of [...Object.values(groupActions), ...Object.values(studentAssociation)]) fn.mockClear()
+    for (const fn of [...Object.values(groupActions), ...Object.values(directChats), ...Object.values(profileActions), peopleSearchRetry]) fn.mockClear()
   },
 }
 
@@ -198,6 +236,14 @@ const subscribe = (l: () => void) => {
 }
 const useMockState = () => useSyncExternalStore(subscribe, chatMock.get)
 
+function useMockPeopleSearch(query: string, { enabled = true }: { enabled?: boolean } = {}): PeopleSearchState {
+  const s = useMockState()
+  const q = searchableQuery(query)
+  if (!enabled || q === null) return { status: 'idle', query: q ?? '', results: [], stale: false, error: null, retry: peopleSearchRetry }
+  if (s.peopleSearch) return { ...s.peopleSearch, retry: peopleSearchRetry }
+  return { status: 'success', query: q, results: searchDirectory(s.directory, q), stale: false, error: null, retry: peopleSearchRetry }
+}
+
 export const chatHooksMock = {
   useChatSession: () => useMockState().session,
   useConversations: (kind: ConversationKind) => useMockState().lists[kind],
@@ -208,7 +254,9 @@ export const chatHooksMock = {
     notifications.activeConversationId = activeConversationId
   },
   useGroupActions: () => groupActions,
-  useStudentAssociation: () => studentAssociation,
+  useDirectChats: () => directChats,
+  useProfileActions: () => profileActions,
+  usePeopleSearch: useMockPeopleSearch,
   useAdminUsers: () => useMockState().admin,
   signOutChat: vi.fn(() => Promise.resolve()),
 }

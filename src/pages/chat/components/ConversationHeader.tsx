@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/I18nProvider'
 import type { ConversationSummary } from '@/services/chat/types'
 import { conversationTitle, publicIdLabel } from '../chatFormat'
 import { chatTabPath } from '../chatPaths'
+import { useChatSplit } from '../chatSplit'
 import { ChatAvatar } from './ChatAvatar'
 import { MiniPill, RolePill } from './Pills'
 
@@ -21,13 +22,16 @@ const backPath = (conversation: ConversationSummary | null) => chatTabPath(conve
 
 /**
  * Sticky glass bar at the top of a conversation (edge to edge, below the status bar): back · avatar · name with
- * role pill + "ID 07" (direct) or "N participantes" (group, tappable → group info). Hosts the offline pill,
- * since the layout's banner is hidden on this screen.
+ * role pill + "ID: 07" (direct) or "N participantes" (group, tappable → group info). Hosts the offline pill,
+ * since the layout's banner is hidden on this screen. In the desktop split view the list is already on screen:
+ * no back button, and the title is an h2 under the list's "Chat" h1.
  */
 export function ConversationHeader({ conversation, onOpenInfo }: ConversationHeaderProps) {
   const i18n = useI18n()
   const { t, tn } = i18n
   const navigate = useNavigate()
+  const split = useChatSplit()
+  const Title = split ? 'h2' : 'h1'
   const group = conversation?.kind === 'group'
   const title = conversation ? conversationTitle(conversation, i18n) : ''
   const other = conversation?.otherUser ?? null
@@ -43,7 +47,7 @@ export function ConversationHeader({ conversation, onOpenInfo }: ConversationHea
         aria-label={`${t('chat.actions.groupInfo')}: ${title}, ${tn('chat.participants', conversation.membersCount)}`}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-control border-0 bg-transparent px-1 py-1 text-left text-text transition-colors duration-150 hover:bg-primary-soft focus-visible:-outline-offset-2"
       >
-        <ChatAvatar group size={40} />
+        <ChatAvatar group photo={conversation.avatarPath} size={40} />
         <span aria-hidden="true" className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate text-base leading-[1.25] font-bold">{title}</span>
           <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-text3">
@@ -56,7 +60,7 @@ export function ConversationHeader({ conversation, onOpenInfo }: ConversationHea
   } else if (conversation) {
     identity = (
       <div className="flex min-w-0 flex-1 items-center gap-3 px-1 py-1">
-        <ChatAvatar name={title} size={40} />
+        <ChatAvatar name={title} photo={other?.avatarPath ?? null} size={40} />
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="m-0 truncate text-base leading-[1.25] font-bold">{title}</p>
           {other ? (
@@ -73,9 +77,11 @@ export function ConversationHeader({ conversation, onOpenInfo }: ConversationHea
 
   return (
     <header className="sticky top-0 z-(--z-nav) -mx-5 border-b border-solid border-border bg-nav px-2 pt-[calc(env(safe-area-inset-top)_+_6px)] pb-1.5 backdrop-blur-[24px] backdrop-saturate-160 lg:-mx-10 lg:px-6 lg:pt-3">
-      <h1 className="sr-only">{title || t('chat.title')}</h1>
+      <Title className="sr-only">{title || t('chat.title')}</Title>
       <div className="flex min-h-12 items-center gap-1">
-        <IconButton variant="plain" icon={ArrowLeft} aria-label={t('chat.actions.backToList')} onClick={() => void navigate(backPath(conversation))} />
+        {split ? null : (
+          <IconButton variant="plain" icon={ArrowLeft} aria-label={t('chat.actions.backToList')} onClick={() => void navigate(backPath(conversation))} />
+        )}
         {identity ?? <span className="flex-1" />}
         {group && onOpenInfo ? <IconButton variant="plain" icon={Info} aria-label={t('chat.actions.groupInfo')} aria-haspopup="dialog" onClick={onOpenInfo} /> : null}
       </div>

@@ -77,7 +77,7 @@ export function useConversation(conversationId: string): ConversationState {
   const senders = useMemo(() => {
     const out: Record<string, PublicProfile> = {}
     const add = (p: PublicProfile) => {
-      out[p.id] = { id: p.id, publicId: p.publicId, displayName: p.displayName, role: p.role }
+      out[p.id] = { id: p.id, publicId: p.publicId, displayName: p.displayName, role: p.role, avatarPath: p.avatarPath }
     }
     for (const m of members?.items ?? EMPTY_MEMBERS) add(m)
     for (const msg of messages) {

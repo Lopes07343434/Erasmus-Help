@@ -219,6 +219,9 @@ $$;
 --   admin                                 → anyone
 --   everybody else                        → not_allowed
 -- Targets outside the caller's scope → not_found (no existence oracle).
+-- (drop first: migration 20260926100000 changes the result columns, and re-running this file
+-- after it — e.g. apply_all.sql pasted again — must not fail on "cannot change return type").
+drop function if exists public.lookup_profile_by_public_id(bigint);
 create or replace function public.lookup_profile_by_public_id(p_public_id bigint)
 returns table (id uuid, public_id bigint, display_name text, role public.user_role)
 language plpgsql
@@ -792,6 +795,9 @@ $$;
 --   last_message : { id, kind, preview (text, ≤120 chars, single line), audio_duration_ms,
 --                    sender_id, sender_name, created_at } or NULL
 --   unread_count : messages newer than my last_read_at not sent by me (capped at 100 → "99+")
+-- (drop first: migration 20260926100000 changes the result columns, and re-running this file
+-- after it — e.g. apply_all.sql pasted again — must not fail on "cannot change return type").
+drop function if exists public.list_my_conversations(boolean);
 create or replace function public.list_my_conversations(p_include_archived boolean default false)
 returns table (
   id              uuid,
@@ -885,6 +891,9 @@ end;
 $$;
 
 -- Participant list (members and admins). last_read_at powers read receipts.
+-- (drop first: migration 20260926100000 changes the result columns, and re-running this file
+-- after it — e.g. apply_all.sql pasted again — must not fail on "cannot change return type").
+drop function if exists public.list_conversation_members(uuid);
 create or replace function public.list_conversation_members(p_conversation uuid)
 returns table (
   user_id      uuid,

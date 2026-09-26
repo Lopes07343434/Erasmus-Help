@@ -23,10 +23,18 @@ export type MessageStatus = 'sending' | 'sent' | 'read' | 'failed'
 /** The only profile fields other users may see. */
 export interface PublicProfile {
   id: string
-  /** Automatic public number, shown with `formatPublicId` ("ID 01"). Not a credential. */
+  /** Automatic public number (1, 2, 3, … gap-free, never reused), shown with `formatPublicId` ("ID: 01"). Not a credential. */
   publicId: number
   displayName: string
   role: UserRole
+  /** Photo: object path in the public bucket `avatars` (`users/{id}/{uuid}.jpg`), or null. URL: `avatarUrl()`. */
+  avatarPath: string | null
+}
+
+/** One row of rpc search_profiles (people directory: by ID or by name). Never the signed-in user. */
+export interface PersonSearchResult extends PublicProfile {
+  /** The typed ID is exactly this person's ID ("07" → 7): listed first. */
+  exactIdMatch: boolean
 }
 
 /** The signed-in user's full profile (rpc get_my_profile / upsert_my_profile). */
@@ -59,6 +67,8 @@ export interface ConversationSummary {
   kind: ConversationKind
   /** Groups only. For direct chats use `otherUser.displayName`. */
   name: string | null
+  /** Group photo (`groups/{id}/{uuid}.jpg` in bucket `avatars`). Direct chats: use `otherUser.avatarPath`. */
+  avatarPath: string | null
   allowLeave: boolean
   archivedAt: string | null
   myRole: MemberRole
@@ -118,9 +128,22 @@ export const CHAT_LIMITS = {
   audioMaxBytes: 5 * 1024 * 1024,
   groupCreateMaxMembers: 500,
   unreadCap: 100,
+  /** People search: name queries need ≥ 2 characters; queries are capped at 60; ≤ 20 results. */
+  searchMinNameLength: 2,
+  searchMaxLength: 60,
+  searchResultsLimit: 20,
+  /** Photos are re-encoded client-side to a square JPEG of this size before upload. */
+  avatarSizePx: 512,
+  /** Bucket limit (the re-encoded JPEG is far smaller). */
+  avatarMaxBytes: 2 * 1024 * 1024,
+  /** Largest picture the user may pick (it is decoded and shrunk in the browser). */
+  avatarSourceMaxBytes: 20 * 1024 * 1024,
 } as const
 
 export const CHAT_AUDIO_BUCKET = 'chat-audio'
+
+/** Public bucket of profile / group photos (random object names; the bucket cannot be listed). */
+export const CHAT_AVATAR_BUCKET = 'avatars'
 
 /** Upload with one of these exact content types (no `;codecs=` parameter). */
 export const CHAT_AUDIO_MIME_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/x-m4a'] as const
@@ -155,16 +178,27 @@ export function parseChatRpcError(err: unknown): ChatRpcError | null {
 // Public ID helpers
 // ---------------------------------------------------------------------------
 
-/** 1 → "ID 01", 7 → "ID 07", 123 → "ID 123". */
-export function formatPublicId(n: number): string {
+/** The number as shown: 1–9 → "01"–"09", from 10 on as is ("10", "99", "100", "101"). */
+export function formatPublicIdNumber(n: number): string {
   if (!Number.isSafeInteger(n) || n < 1) throw new RangeError(`Invalid public id: ${n}`)
-  return `ID ${String(n).padStart(2, '0')}`
+  return String(n).padStart(2, '0')
 }
 
-/** Parses what a user types to add someone: "ID 01", "id7", "#7", " 07 " → 7. Anything else → null. */
+/** 1 → "ID: 01", 7 → "ID: 07", 15 → "ID: 15", 123 → "ID: 123". */
+export function formatPublicId(n: number): string {
+  return `ID: ${formatPublicIdNumber(n)}`
+}
+
+/** An ID as typed: "7", "07", "ID 07", "ID: 07", "id7", "#7" (leading zeros allowed). */
+const PUBLIC_ID_INPUT_RE = /^\s*(?:id)?\s*[:#]?\s*(\d{1,15})\s*$/i
+
+/** Parses what a user types to find someone: "ID: 01", "ID 01", "id7", "#7", " 07 " → 7. Anything else → null. */
 export function parsePublicId(input: string): number | null {
-  const match = /^\s*(?:id)?\s*#?\s*(\d{1,15})\s*$/i.exec(input)
+  const match = PUBLIC_ID_INPUT_RE.exec(input)
   if (!match?.[1]) return null
   const n = Number(match[1])
   return Number.isSafeInteger(n) && n >= 1 ? n : null
 }
+
+/** True when the search text is an ID (digits, optionally "ID"/"#"/":"), as search_profiles decides server-side. */
+export const isPublicIdQuery = (input: string): boolean => PUBLIC_ID_INPUT_RE.test(input)

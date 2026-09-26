@@ -4,7 +4,7 @@
  */
 import type { AppError } from '@/services/errors'
 import type { RecordedAudio } from '@/services/audio'
-import type { ChatMessage, ConversationKind, ConversationSummary, GroupMember, MyProfile, PublicProfile } from './types'
+import type { ChatMessage, ConversationKind, ConversationSummary, GroupMember, MemberRole, MyProfile, PersonSearchResult, PublicProfile } from './types'
 
 /** Overall availability of the chat backend for this device. */
 export type ChatSessionStatus =
@@ -76,8 +76,39 @@ export interface IncomingMessageNotice {
   audioDurationMs: number | null
 }
 
+/**
+ * People directory search (rpc search_profiles), debounced. `query` is what was searched (cleaned).
+ *   idle    → nothing to search (empty, a 1-letter name, chat not ready)
+ *   loading → request in flight (`results` may still hold the previous query's results: `stale`)
+ */
+export interface PeopleSearchState {
+  status: 'idle' | 'loading' | 'success' | 'error'
+  query: string
+  /** Exact ID match first, then IDs starting with the typed digits; or names (starts-with first). Never me. */
+  results: PersonSearchResult[]
+  /** `results` belong to an earlier query (shown while the new one loads). */
+  stale: boolean
+  error: AppError | null
+  retry(): void
+}
+
+export interface PeopleActions {
+  /** Server search (validated: trimmed, ≤ 60 chars; names need ≥ 2 chars → otherwise []). */
+  search(query: string): Promise<PersonSearchResult[]>
+}
+
+export interface DirectChatActions {
+  /** "Adicionar pessoa": creates (or reopens) the direct conversation with that ID. Returns its id. */
+  startDirectConversation(publicId: number): Promise<string>
+}
+
+export interface ProfileActions {
+  /** New photo (any image: cropped/resized/re-encoded to a 512 px JPEG first) or null to remove it. */
+  setMyAvatar(image: Blob | null): Promise<void>
+}
+
 export interface GroupActions {
-  /** Creates a group; the caller becomes manager. Returns the conversation id. */
+  /** Creates a group; the caller becomes its administrator (manager). Returns the conversation id. */
   createGroup(input: { name: string; memberPublicIds: number[]; allowLeave?: boolean }): Promise<string>
   renameGroup(conversationId: string, name: string): Promise<void>
   setArchived(conversationId: string, archived: boolean): Promise<void>
@@ -85,16 +116,11 @@ export interface GroupActions {
   deleteGroup(conversationId: string): Promise<void>
   addMember(conversationId: string, publicId: number, asManager?: boolean): Promise<void>
   removeMember(conversationId: string, userId: string): Promise<void>
+  /** Group administrators: 'manager' = make administrator, 'member' = remove administrator rights. */
+  setMemberRole(conversationId: string, userId: string, role: MemberRole): Promise<void>
+  /** Group administrators: new group photo (any image) or null to remove it. */
+  setGroupAvatar(conversationId: string, image: Blob | null): Promise<void>
   leaveGroup(conversationId: string): Promise<void>
-  /** Name/role preview before adding someone (throws not-found / not-allowed). */
-  lookupByPublicId(publicId: number): Promise<PublicProfile>
-}
-
-export interface StudentAssociation {
-  /** Verified monitor associates a student (creates the direct conversation). Returns its id. */
-  associateStudent(studentPublicId: number): Promise<string>
-  removeAssociation(studentId: string): Promise<void>
-  lookupStudent(publicId: number): Promise<PublicProfile>
 }
 
 export interface AdminUserRow extends PublicProfile {
@@ -110,7 +136,6 @@ export interface AdminUsersState {
   error: AppError | null
   search(query: string): void
   verifyMonitor(userId: string, verified: boolean): Promise<void>
-  setCanManageGroups(userId: string, value: boolean): Promise<void>
   setRole(userId: string, role: 'student' | 'monitor'): Promise<void>
   setStudentMonitor(studentPublicId: number, monitorPublicId: number | null): Promise<void>
 }

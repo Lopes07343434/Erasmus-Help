@@ -1,6 +1,6 @@
 import type { I18nValue } from '@/i18n/I18nProvider'
 import { formatDuration } from '@/services/audio'
-import { formatPublicId, type ConversationSummary, type LastMessagePreview, type PublicProfile } from '@/services/chat/types'
+import { formatPublicId, formatPublicIdNumber, type ConversationSummary, type LastMessagePreview, type PublicProfile } from '@/services/chat/types'
 
 type Fmt = Pick<I18nValue, 't' | 'formatDate'>
 type Tr = Pick<I18nValue, 't'>
@@ -8,7 +8,7 @@ type Tr = Pick<I18nValue, 't'>
 const DAY_MS = 86_400_000
 const TIME: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
 
-/** "ID 07" (empty for a malformed number instead of throwing while rendering). */
+/** "ID: 07" (empty for a malformed number instead of throwing while rendering). */
 export function publicIdLabel(publicId: number): string {
   try {
     return formatPublicId(publicId)
@@ -123,4 +123,15 @@ export function sortMembers<T extends PublicProfile & { memberRole: 'member' | '
   return [...members].sort((a, b) =>
     a.memberRole === b.memberRole ? collator.compare(a.displayName, b.displayName) : a.memberRole === 'manager' ? -1 : 1,
   )
+}
+
+/** Accessible one-line description of a person in search results: "07 — Samuel Lopes — Monitor". */
+export function personResultLabel(person: Pick<PublicProfile, 'publicId' | 'displayName' | 'role'>, { t }: Tr): string {
+  let id = ''
+  try {
+    id = formatPublicIdNumber(person.publicId)
+  } catch {
+    // malformed number: leave the ID out
+  }
+  return t('chat.search.result', { id, name: person.displayName, role: t(`chat.roles.${person.role}`) })
 }

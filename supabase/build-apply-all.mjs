@@ -11,7 +11,8 @@ const bar = '-- ' + '>'.repeat(77)
 const header = `-- =============================================================================
 -- Erasmus Help — Chat: ALL migrations in one file (GENERATED — do not edit by hand)
 --
--- For the Supabase Dashboard → SQL Editor of a FRESH project: paste everything, Run once.
+-- Supabase Dashboard → SQL Editor: paste everything, Run once. Works on a fresh project and on one
+-- that already ran an older apply_all.sql (every migration is idempotent).
 -- Runs as \`postgres\` in a single transaction: either everything is applied or nothing.
 -- Source of truth: supabase/migrations/*.sql (same content, same order):
 ${files.map((f) => `--   ${f}`).join('\n')}

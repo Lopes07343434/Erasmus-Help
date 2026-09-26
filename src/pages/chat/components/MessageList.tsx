@@ -24,7 +24,8 @@ interface MessageListProps {
 }
 
 /**
- * Chronological messages grouped by day ("Hoje", "Ontem", date). The top holds "load older" (a button, also
+ * Chronological messages grouped by day ("Hoje", "Ontem", date); in groups each run of consecutive incoming messages
+ * from one person starts with the author ("Samuel Lopes · 15"). The top holds "load older" (a button, also
  * auto-triggered by an IntersectionObserver when scrolled into view) or the start-of-conversation marker.
  * New incoming messages are announced by the page's live log, not by this list (older pages would be read too).
  */
@@ -89,15 +90,18 @@ export function MessageList({
             {formatDayLabel(day.date, now, i18n)}
           </h2>
           <ol className="m-0 flex list-none flex-col gap-2 p-0">
-            {day.items.map((message) => {
+            {day.items.map((message, index) => {
               const mine = message.senderId === meId
+              // Groups: the author once per run of consecutive messages from the same person (screen readers still
+              // hear the name on every bubble).
+              const sameAuthorAsPrevious = index > 0 && day.items[index - 1]?.senderId === message.senderId
               return (
                 <MessageBubble
                   key={message.id}
                   message={message}
                   mine={mine}
                   sender={mine ? null : (senders[message.senderId] ?? null)}
-                  showSender={kind === 'group'}
+                  showSender={kind === 'group' && !sameAuthorAsPrevious}
                   onRetry={onRetry}
                   onDiscard={onDiscard}
                   getAudioUrl={getAudioUrl}

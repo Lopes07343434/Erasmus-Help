@@ -53,7 +53,7 @@ describe('row parsers', () => {
       id: DIRECT,
       kind: 'direct',
       name: null,
-      otherUser: { id: OTHER, publicId: 2, displayName: 'Bruno', role: 'monitor' },
+      otherUser: { id: OTHER, publicId: 2, displayName: 'Bruno', role: 'monitor', avatarPath: null },
       lastMessage: { id: uid(5), preview: 'hey', senderName: 'Bruno' },
       unreadCount: 100,
     })
@@ -68,6 +68,7 @@ describe('row parsers', () => {
       publicId: 2,
       displayName: 'Bruno',
       role: 'monitor',
+      avatarPath: null,
       memberRole: 'manager',
       joinedAt: ts(0),
       lastReadAt: ts(3),

@@ -2,6 +2,9 @@
 -- Erasmus Help — Chat security tests (pgTAP)
 -- Run locally:  npx supabase start && npx supabase test db
 -- Everything runs in one transaction and is rolled back.
+-- Rules as of migration 20260926100000_chat_directory (open directory, anyone can create a group
+-- and becomes its manager, a group always keeps a manager). Migration 5 in depth:
+-- chat_directory.test.sql.
 --
 -- Acting as a user:  reset role; set local request.jwt.claim.sub = '<uuid>'; set local role authenticated;
 -- Acting as owner :  reset role; set local request.jwt.claim.sub = '';   (auth.uid() is null → trusted)
@@ -18,7 +21,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(82);
+select plan(87);
 
 -- -----------------------------------------------------------------------------
 -- Fixtures
@@ -144,8 +147,9 @@ set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c2';
 set local role authenticated;
 select throws_ok($$ select public.associate_student((select public_id from chat_test.refs where label = 's1')) $$,
   'P0001', 'not_allowed', 'students cannot associate anyone');
-select throws_ok($$ select * from public.lookup_profile_by_public_id((select public_id from chat_test.refs where label = 's1')) $$,
-  'P0001', 'not_allowed', 'students cannot look up profiles by public ID');
+-- Open directory (migration 5): any user with a profile can look people up by public ID.
+select is((select display_name from public.lookup_profile_by_public_id((select public_id from chat_test.refs where label = 's1'))),
+  'Sam Student', 'students can look up profiles by public ID (open directory)');
 
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000a1';
@@ -256,10 +260,14 @@ select is((select count(*)::integer from public.messages where conversation_id =
 -- -----------------------------------------------------------------------------
 -- 5. Groups
 -- -----------------------------------------------------------------------------
+-- Migration 5: anyone with a profile can create a group and becomes its manager.
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c1';
 set local role authenticated;
-select throws_ok($$ select public.create_group('Nope', '{}') $$, 'P0001', 'not_allowed', 'students cannot create groups');
+select lives_ok($$ insert into chat_test.refs (label, id) select 's1_group', public.create_group('Grupo do S1', '{}') $$,
+  'students can create groups');
+select is((select my_role::text from public.list_my_conversations() where id = (select id from chat_test.refs where label = 's1_group')),
+  'manager', 'the student who creates a group becomes its manager');
 
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000b1';
@@ -269,9 +277,10 @@ select lives_ok($$ insert into chat_test.refs (label, id)
                      array[(select public_id from chat_test.refs where label = 's1'),
                            (select public_id from chat_test.refs where label = 's3')]) $$,
   'verified monitor with permission creates a group');
-select throws_ok($$ select public.add_group_member((select id from chat_test.refs where label = 'group'),
-                                                   (select public_id from chat_test.refs where label = 's2'), true) $$,
-  'P0001', 'invalid_input', 'students cannot become group managers');
+-- Migration 5: group managers can be anyone (students included).
+select lives_ok($$ select public.add_group_member((select id from chat_test.refs where label = 'group'),
+                                                  (select public_id from chat_test.refs where label = 's2'), true) $$,
+  'students can be added as group managers');
 
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c1';
@@ -284,13 +293,14 @@ select throws_ok($$ insert into public.conversation_members (conversation_id, us
   '42501', null, 'no direct writes to conversation_members');
 select throws_ok($$ select public.rename_group((select id from chat_test.refs where label = 'group'), 'Hacked') $$,
   'P0001', 'not_allowed', 'student member cannot rename the group');
-select is((select count(*)::integer from public.list_conversation_members((select id from chat_test.refs where label = 'group'))), 3,
-  'participants see the participant list');
+select is((select count(*)::integer from public.list_conversation_members((select id from chat_test.refs where label = 'group'))), 4,
+  'participants see the participant list (M1, S1, S3 + S2 as manager)');
 select is((select count(*)::integer from public.profiles where id = '00000000-0000-4000-8000-0000000000c3'), 1,
   'group members can see each other''s public profile');
 
+-- S2 is now a manager of the group: M2 (verified monitor, not a member) plays the outsider.
 reset role;
-set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c2';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000b2';
 set local role authenticated;
 select throws_ok($$ select * from public.list_conversation_members((select id from chat_test.refs where label = 'group')) $$,
   'P0001', 'not_found', 'non-members cannot list participants');
@@ -307,8 +317,26 @@ set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000b1';
 set local role authenticated;
 select lives_ok($$ select public.remove_group_member((select id from chat_test.refs where label = 'group'), '00000000-0000-4000-8000-0000000000c1') $$,
   'manager removes a member');
-select throws_ok($$ select public.leave_group((select id from chat_test.refs where label = 'group')) $$,
-  'P0001', 'last_manager', 'last manager cannot leave');
+-- Migration 5: the last manager may leave; the longest-standing member takes over automatically,
+-- and the group is deleted when its last member leaves.
+select lives_ok($$ select public.set_group_member_role((select id from chat_test.refs where label = 'group'),
+                                                       '00000000-0000-4000-8000-0000000000c2', 'member') $$,
+  'manager demotes the other manager (S2) to plain member');
+select lives_ok($$ select public.leave_group((select id from chat_test.refs where label = 'group')) $$,
+  'the last manager can leave');
+
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c2';
+set local role authenticated;
+select is((select my_role::text from public.list_my_conversations() where id = (select id from chat_test.refs where label = 'group')),
+  'manager', 'last manager leaving promotes the next member');
+select lives_ok($$ select public.leave_group((select id from chat_test.refs where label = 'group')) $$,
+  'the last member leaves');
+
+reset role;
+set local request.jwt.claim.sub = '';
+select is((select count(*)::integer from public.conversations where id = (select id from chat_test.refs where label = 'group')), 0,
+  'a group is deleted when its last member leaves');
 
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-0000000000c1';

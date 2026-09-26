@@ -63,7 +63,7 @@ describe('useChatNotifications', () => {
     await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
     expect(onNotice).toHaveBeenCalledWith({ conversationId: GROUP, kind: 'group', title: 'Erasmus Milano', senderName: 'Carla', preview: null, audioDurationMs: 4200 })
     const q = fake.queries.find((x) => x.table === 'profiles')
-    expect(q?.columns).toBe('id,public_id,display_name,role')
+    expect(q?.columns).toBe('id,public_id,display_name,role,avatar_path')
     expect(q?.ops).toContainEqual(['in', 'id', [THIRD]])
   })
 
@@ -85,6 +85,18 @@ describe('useChatNotifications', () => {
 
     act(() => ch.emit('messages', 'INSERT', textRow(uid(6), DIRECT, OTHER, ts(10))))
     await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
+  })
+
+  it('notifies the open conversation too while the page is hidden (background tab)', async () => {
+    const { onNotice } = mount(DIRECT)
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    try {
+      act(() => fake.lastChannel().emit('messages', 'INSERT', textRow(uid(7), DIRECT, OTHER, ts(11))))
+      await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
+      expect(onNotice.mock.calls[0]?.[0]).toMatchObject({ conversationId: DIRECT })
+    } finally {
+      visibility.mockRestore()
+    }
   })
 
   it('stops after unmount', async () => {

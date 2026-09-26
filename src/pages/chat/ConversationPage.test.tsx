@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { ToastProvider } from '@/components/ui'
@@ -11,18 +11,21 @@ import ConversationPage from './ConversationPage'
 import {
   chatMock,
   conversationState,
+  directChats,
   groupActions,
   makeDirect,
   makeGroup,
   makeMe,
   member,
   MONITOR,
+  person,
   readySession,
   STUDENT_ANA,
   textMessage,
 } from './testFixtures'
 
 vi.mock('@/hooks/chat', async () => (await import('@/pages/chat/testFixtures')).chatHooksMock)
+vi.mock('@/services/chat/avatars', () => ({ avatarUrl: (path: string | null | undefined) => (path ? `https://cdn.test/${path}` : null) }))
 
 let finePointer = true
 
@@ -51,11 +54,35 @@ const now = new Date()
 const day = (offset: number, h: number, m = 0) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, h, m).toISOString()
 
 const me = makeMe({ id: 'u-me', role: 'student' })
+const BRUNO = person('u-bruno', 21, 'Bruno Lima', 'student')
+const PLATFORM_ADMIN = person('u-adm', 1, 'Carla Nunes', 'admin')
 const groupMessages = [
   textMessage('m1', MONITOR.id, 'Bem-vindos ao grupo!', day(-1, 18)),
   textMessage('m2', 'u-me', 'Obrigada 🙂', day(0, 9, 5), { status: 'read' }),
   textMessage('m3', STUDENT_ANA.id, 'Olá a todos', day(0, 9, 7)),
 ]
+
+/** Chat error as thrown by the data layer (AppError + chat reason). */
+const chatError = (chatCode: string) => Object.assign(new AppError('permission-denied'), { chatCode })
+
+/** I am an administrator ('manager') of the group, with a plain member, another administrator and a platform admin. */
+function asGroupAdmin(extra: Parameters<typeof conversationState>[0] = {}) {
+  const admin = makeMe({ id: 'u-me', role: 'student' })
+  chatMock.set({
+    session: readySession(admin),
+    conversation: conversationState({
+      conversation: makeGroup({ myRole: 'manager', membersCount: 4 }),
+      members: [member(admin, 'manager'), member(STUDENT_ANA), member(MONITOR, 'manager'), member(PLATFORM_ADMIN)],
+      messages: [],
+      ...extra,
+    }),
+  })
+}
+
+async function openGroupInfo(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Informações do grupo' }))
+  return screen.getByRole('dialog', { name: 'Erasmus Milão' })
+}
 
 beforeAll(async () => {
   useSettingsStore.setState({ appLanguage: 'pt-PT' })
@@ -94,21 +121,34 @@ afterEach(() => {
 })
 
 describe('ConversationPage', () => {
-  it('renders a group conversation grouped by day with sender names, role pills and delivery state', () => {
+  it('renders a group conversation grouped by day with "Nome · ID" authors, role pills and delivery state', () => {
     renderConversation()
-    expect(screen.getByRole('button', { name: 'Detalhes do grupo: Erasmus Milão, 3 participantes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Informações do grupo: Erasmus Milão, 3 participantes' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Ontem' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Hoje' })).toBeInTheDocument()
 
-    const incoming = screen.getByText('Bem-vindos ao grupo!').closest('li')
-    expect(incoming).not.toBeNull()
-    expect(within(incoming as HTMLElement).getByText('João Pereira')).toBeInTheDocument()
-    expect(within(incoming as HTMLElement).getByText('Monitor')).toBeInTheDocument()
+    const incoming = screen.getByText('Bem-vindos ao grupo!').closest('li') as HTMLElement
+    expect(within(incoming).getByText('João Pereira · 03')).toBeInTheDocument()
+    expect(within(incoming).getByText('Monitor')).toBeInTheDocument()
+    const fromAna = screen.getByText('Olá a todos').closest('li') as HTMLElement
+    expect(within(fromAna).getByText('Ana Costa · 12')).toBeInTheDocument()
 
     const mine = screen.getByText('Obrigada 🙂').closest('li') as HTMLElement
     expect(within(mine).getByRole('img', { name: 'Lida' })).toBeInTheDocument()
     expect(within(mine).queryByText('Aluno')).not.toBeInTheDocument()
+    expect(within(mine).queryByText(/·/)).not.toBeInTheDocument()
     expect(chatMock.get().conversation.markRead).toHaveBeenCalled()
+  })
+
+  it('shows the author once per run of consecutive messages from the same person', () => {
+    const current = chatMock.get().conversation
+    chatMock.set({ conversation: { ...current, messages: [...groupMessages, textMessage('m4', STUDENT_ANA.id, 'Alguém vem ao jantar?', day(0, 9, 8))] } })
+    renderConversation()
+    const follow = screen.getByText('Alguém vem ao jantar?').closest('li') as HTMLElement
+    expect(within(follow).queryByText('Ana Costa · 12')).not.toBeInTheDocument()
+    // Screen readers still hear who wrote it.
+    expect(within(follow).getByText('Ana Costa:')).toHaveClass('sr-only')
+    expect(screen.getAllByText('Ana Costa · 12')).toHaveLength(1)
   })
 
   it('direct header shows the other person with role pill and public ID', () => {
@@ -118,11 +158,11 @@ describe('ConversationPage', () => {
     expect(within(header).getByRole('heading', { level: 1, name: 'João Pereira' })).toBeInTheDocument()
     expect(within(header).getByText('João Pereira', { selector: 'p' })).toBeInTheDocument()
     expect(within(header).getByText('Monitor')).toBeInTheDocument()
-    expect(within(header).getByText('ID 03')).toBeInTheDocument()
+    expect(within(header).getByText('ID: 03')).toBeInTheDocument()
     expect(screen.getByText('Ainda não há mensagens. Diz olá!')).toBeInTheDocument()
   })
 
-  it('failed messages offer retry and discard', async () => {
+  it('failed messages say so clearly and offer retry and discard', async () => {
     const user = userEvent.setup()
     const conv = conversationState({
       conversation: makeDirect({ id: 'c-direct' }),
@@ -130,7 +170,9 @@ describe('ConversationPage', () => {
     })
     chatMock.set({ conversation: conv })
     renderConversation('c-direct')
-    expect(screen.getAllByText('Não enviada').length).toBeGreaterThan(0)
+    const bubble = screen.getByText('Não chegou').closest('li') as HTMLElement
+    expect(within(bubble).getByText('Não foi possível enviar a mensagem. Tenta novamente.')).toBeInTheDocument()
+    expect(within(bubble).getByRole('img', { name: 'Não enviada' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     expect(conv.retry).toHaveBeenCalledWith('m9')
     await user.click(screen.getByRole('button', { name: 'Descartar' }))
@@ -187,20 +229,53 @@ describe('ConversationPage', () => {
     expect(log).toHaveTextContent('Nova mensagem de João Pereira: Amanhã às 10h')
   })
 
-  it('group info: members see participants and can leave after confirming', async () => {
+  it('group info for a member: participants with "Administrador"/"Tu" pills, no management actions', async () => {
     const user = userEvent.setup()
     renderConversation()
-    await user.click(screen.getByRole('button', { name: 'Detalhes do grupo' }))
-    const info = screen.getByRole('dialog', { name: 'Erasmus Milão' })
-    expect(within(info).getByText('Gestor')).toBeInTheDocument()
-    expect(within(info).queryByRole('button', { name: /^Remover/ })).not.toBeInTheDocument()
-    expect(within(info).queryByRole('button', { name: 'Mudar o nome' })).not.toBeInTheDocument()
+    const info = await openGroupInfo(user)
+    expect(within(info).getByText('3 participantes')).toBeInTheDocument()
+    expect(within(info).getByText('Os administradores gerem os participantes, o nome e a foto do grupo.')).toBeInTheDocument()
 
+    const joao = within(info).getByRole('button', { name: /João Pereira/ })
+    expect(joao).toHaveTextContent('03')
+    expect(joao).toHaveTextContent('Monitor')
+    expect(joao).toHaveTextContent('Administrador')
+    expect(within(info).getByRole('button', { name: /Ana Costa/ })).not.toHaveTextContent('Administrador')
+    // My own row is not a button and says "Tu".
+    expect(within(info).queryByRole('button', { name: /Rita Sousa/ })).not.toBeInTheDocument()
+    expect(within(info).getByText('Tu')).toBeInTheDocument()
+
+    for (const name of ['Adicionar membro', 'Mudar o nome', 'Arquivar grupo', 'Apagar grupo', 'Adicionar uma foto ao grupo']) {
+      expect(within(info).queryByRole('button', { name: new RegExp(name) })).not.toBeInTheDocument()
+    }
+  })
+
+  it('any participant can open a direct conversation with another member; plain members see no admin options', async () => {
+    const user = userEvent.setup()
+    renderConversation()
+    const info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: /Ana Costa/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Opções para Ana Costa' })
+    expect(within(sheet).getByText('ID: 12')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Tornar administrador' })).not.toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Remover do grupo' })).not.toBeInTheDocument()
+
+    await user.click(within(sheet).getByRole('button', { name: 'Enviar mensagem a Ana Costa' }))
+    expect(directChats.startDirectConversation).toHaveBeenCalledWith(12)
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/chat/c-new'))
+    expect(await screen.findByRole('textbox', { name: 'Mensagem' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('group info: members can leave after confirming (errors stay in the sheet)', async () => {
+    const user = userEvent.setup()
+    renderConversation()
+    const info = await openGroupInfo(user)
     await user.click(within(info).getByRole('button', { name: 'Sair do grupo' }))
     const confirm = await screen.findByRole('dialog', { name: 'Sair do grupo?' })
-    groupActions.leaveGroup.mockRejectedValueOnce(Object.assign(new AppError('permission-denied'), { chatCode: 'last_manager' }))
+    groupActions.leaveGroup.mockRejectedValueOnce(chatError('not_allowed'))
     await user.click(within(confirm).getByRole('button', { name: 'Sair do grupo' }))
-    expect(await within(confirm).findByRole('alert')).toHaveTextContent('És a única pessoa que gere este grupo.')
+    expect(await within(confirm).findByRole('alert')).toHaveTextContent('Não tens permissão para fazer isto.')
 
     await user.click(within(confirm).getByRole('button', { name: 'Sair do grupo' }))
     expect(groupActions.leaveGroup).toHaveBeenLastCalledWith('c-group')
@@ -208,35 +283,122 @@ describe('ConversationPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/chat?tab=grupos')
   })
 
-  it('group info: managers can add (by ID) and remove participants', async () => {
+  it('group administrators promote and demote administrators ("last_manager" is explained)', async () => {
     const user = userEvent.setup()
-    const manager = makeMe({ id: 'u-me', role: 'monitor', monitorStatus: 'verified', canManageGroups: true })
-    chatMock.set({
-      session: readySession(manager),
-      conversation: conversationState({
-        conversation: makeGroup({ myRole: 'manager' }),
-        members: [member(manager, 'manager'), member(STUDENT_ANA)],
-        messages: [],
-      }),
-    })
+    asGroupAdmin()
     renderConversation()
-    await user.click(screen.getByRole('button', { name: 'Detalhes do grupo' }))
-    let info = screen.getByRole('dialog', { name: 'Erasmus Milão' })
-
-    await user.click(within(info).getByRole('button', { name: 'Remover Ana Costa do grupo' }))
-    const confirm = await screen.findByRole('dialog', { name: 'Remover do grupo?' })
-    await user.click(within(confirm).getByRole('button', { name: 'Remover' }))
-    expect(groupActions.removeMember).toHaveBeenCalledWith('c-group', STUDENT_ANA.id)
+    let info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: /Ana Costa/ }))
+    let sheet = await screen.findByRole('dialog', { name: 'Opções para Ana Costa' })
+    await user.click(within(sheet).getByRole('button', { name: 'Tornar administrador' }))
+    expect(groupActions.setMemberRole).toHaveBeenCalledWith('c-group', STUDENT_ANA.id, 'manager')
+    expect(await screen.findByText('Ana Costa é agora administrador do grupo')).toBeInTheDocument()
 
     info = await screen.findByRole('dialog', { name: 'Erasmus Milão' })
-    await user.click(within(info).getByRole('button', { name: 'Adicionar participante' }))
-    const add = await screen.findByRole('dialog', { name: 'Adicionar participante' })
-    groupActions.lookupByPublicId.mockResolvedValueOnce({ id: 'u-new', publicId: 21, displayName: 'Bruno Lima', role: 'student' })
-    await user.type(within(add).getByRole('textbox', { name: 'ID' }), 'id 21{Enter}')
-    expect(await within(add).findByText('Bruno Lima')).toBeInTheDocument()
-    await user.click(within(add).getByRole('switch', { name: /Também pode gerir o grupo/ }))
-    await user.click(within(add).getByRole('button', { name: 'Adicionar ao grupo' }))
-    expect(groupActions.lookupByPublicId).toHaveBeenCalledWith(21)
+    await user.click(within(info).getByRole('button', { name: /João Pereira/ }))
+    sheet = await screen.findByRole('dialog', { name: 'Opções para João Pereira' })
+    groupActions.setMemberRole.mockRejectedValueOnce(chatError('last_manager'))
+    await user.click(within(sheet).getByRole('button', { name: 'Retirar administrador' }))
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('O grupo precisa de pelo menos um administrador.')
+    expect(groupActions.setMemberRole).toHaveBeenLastCalledWith('c-group', MONITOR.id, 'member')
+
+    await user.click(within(sheet).getByRole('button', { name: 'Retirar administrador' }))
+    expect(await screen.findByText('João Pereira deixou de ser administrador do grupo')).toBeInTheDocument()
+  })
+
+  it('group administrators remove participants after confirming, but not a platform admin', async () => {
+    const user = userEvent.setup()
+    asGroupAdmin()
+    renderConversation()
+    let info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: /Carla Nunes/ }))
+    let sheet = await screen.findByRole('dialog', { name: 'Opções para Carla Nunes' })
+    expect(within(sheet).queryByRole('button', { name: 'Remover do grupo' })).not.toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'Fechar' }))
+
+    info = await screen.findByRole('dialog', { name: 'Erasmus Milão' })
+    await user.click(within(info).getByRole('button', { name: /João Pereira/ }))
+    sheet = await screen.findByRole('dialog', { name: 'Opções para João Pereira' })
+    await user.click(within(sheet).getByRole('button', { name: 'Remover do grupo' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Remover do grupo?' })
+    expect(confirm).toHaveTextContent('João Pereira deixa de ter acesso a este grupo e às mensagens.')
+    await user.click(within(confirm).getByRole('button', { name: 'Remover' }))
+    expect(groupActions.removeMember).toHaveBeenCalledWith('c-group', MONITOR.id)
+    expect(await screen.findByText('João Pereira já não faz parte do grupo')).toBeInTheDocument()
+  })
+
+  it('"Adicionar membro" searches people like "Adicionar pessoa" and adds them (optionally as administrator)', async () => {
+    const user = userEvent.setup()
+    asGroupAdmin()
+    chatMock.set({ directory: [STUDENT_ANA, BRUNO] })
+    renderConversation()
+    const info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: 'Adicionar membro' }))
+    const add = await screen.findByRole('dialog', { name: 'Adicionar membro' })
+    const field = within(add).getByRole('searchbox', { name: 'Introduzir ID' })
+    expect(field).toHaveFocus()
+
+    // People already in the group are listed greyed out, without an add button.
+    await user.type(field, 'Ana')
+    const ana = within(add).getByRole('group', { name: /Ana Costa/ })
+    expect(ana).toHaveTextContent('Essa pessoa já faz parte do grupo.')
+    expect(within(ana).queryByRole('button')).not.toBeInTheDocument()
+
+    await user.clear(field)
+    await user.type(field, 'Bruno')
+    await user.click(within(add).getByRole('switch', { name: /Também é administrador do grupo/ }))
+    await user.click(within(add).getByRole('button', { name: 'Adicionar Bruno Lima ao grupo' }))
     expect(groupActions.addMember).toHaveBeenCalledWith('c-group', 21, true)
+    expect(await screen.findByText('Bruno Lima já faz parte do grupo')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Erasmus Milão' })).toBeInTheDocument()
+  })
+
+  it('"Adicionar membro": Enter adds the exact ID match; server errors stay in the sheet', async () => {
+    const user = userEvent.setup()
+    asGroupAdmin()
+    chatMock.set({ directory: [BRUNO] })
+    renderConversation()
+    const info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: 'Adicionar membro' }))
+    const add = await screen.findByRole('dialog', { name: 'Adicionar membro' })
+    groupActions.addMember.mockRejectedValueOnce(chatError('archived'))
+    await user.type(within(add).getByRole('searchbox', { name: 'Introduzir ID' }), 'ID: 21{Enter}')
+    expect(groupActions.addMember).toHaveBeenCalledWith('c-group', 21, false)
+    expect(await within(add).findByRole('alert')).toHaveTextContent('Esta conversa está arquivada.')
+  })
+
+  it('group without other members says so and offers "Adicionar membro" to administrators', async () => {
+    const user = userEvent.setup()
+    asGroupAdmin({ conversation: makeGroup({ myRole: 'manager', membersCount: 1 }), members: [member(me, 'manager')] })
+    renderConversation()
+    const info = await openGroupInfo(user)
+    expect(within(info).getByText('Ainda não existem membros neste grupo.')).toBeInTheDocument()
+    expect(within(info).getByRole('button', { name: 'Adicionar membro' })).toBeInTheDocument()
+  })
+
+  it('group administrators change and remove the group photo', async () => {
+    const user = userEvent.setup()
+    asGroupAdmin()
+    renderConversation()
+    let info = await openGroupInfo(user)
+    await user.click(within(info).getByRole('button', { name: 'Adicionar uma foto ao grupo' }))
+    let sheet = await screen.findByRole('dialog', { name: 'Foto do grupo' })
+    expect(within(sheet).queryByRole('button', { name: 'Remover a foto do grupo' })).not.toBeInTheDocument()
+    const file = new File(['png'], 'grupo.png', { type: 'image/png' })
+    await user.upload(sheet.querySelector('input[type="file"]') as HTMLInputElement, file)
+    expect(groupActions.setGroupAvatar).toHaveBeenCalledWith('c-group', file)
+    expect(await screen.findByText('Foto do grupo atualizada')).toBeInTheDocument()
+
+    act(() => {
+      const current = chatMock.get().conversation
+      chatMock.set({ conversation: { ...current, conversation: makeGroup({ myRole: 'manager', membersCount: 4, avatarPath: 'groups/c-group/a.jpg' }) } })
+    })
+    info = await screen.findByRole('dialog', { name: 'Erasmus Milão' })
+    expect(info.querySelector('img[src="https://cdn.test/groups/c-group/a.jpg"]')).not.toBeNull()
+    await user.click(within(info).getByRole('button', { name: 'Mudar a foto do grupo' }))
+    sheet = await screen.findByRole('dialog', { name: 'Foto do grupo' })
+    await user.click(within(sheet).getByRole('button', { name: 'Remover a foto do grupo' }))
+    expect(groupActions.setGroupAvatar).toHaveBeenLastCalledWith('c-group', null)
+    expect(await screen.findByText('Foto do grupo removida')).toBeInTheDocument()
   })
 })

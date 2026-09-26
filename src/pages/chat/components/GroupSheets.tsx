@@ -1,22 +1,24 @@
-import { useId, useRef, useState, type FormEvent, type RefObject } from 'react'
+import { useId, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { useNavigate } from 'react-router'
 import { Archive, ArchiveRestore, CircleAlert, LogOut, Pencil, ShieldCheck, Trash2, UserMinus, UserPlus } from 'lucide-react'
-import { Button, IconButton, ListGroup, ListRow, ListSectionTitle, ListSwitchRow, Sheet, TextField, useToast } from '@/components/ui'
-import { useGroupActions } from '@/hooks/chat'
+import { Button, ListGroup, ListRow, ListSectionTitle, ListSwitchRow, Sheet, Skeleton, TextField, useToast } from '@/components/ui'
+import { useDirectChats, useGroupActions, usePeopleSearch } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
-import { CHAT_LIMITS, type ConversationSummary, type GroupMember, type MyProfile } from '@/services/chat/types'
+import { CHAT_LIMITS, type ConversationSummary, type GroupMember, type MyProfile, type PersonSearchResult } from '@/services/chat/types'
 import { sanitizeText } from '@/utils/validation'
 import { chatErrorMessage } from '../chatErrors'
-import { conversationTitle, publicIdLabel, sortMembers } from '../chatFormat'
-import { chatTabPath } from '../chatPaths'
+import { conversationTitle, sortMembers } from '../chatFormat'
+import { chatTabPath, conversationPath } from '../chatPaths'
 import { canDeleteGroup, canManageGroup } from '../chatPermissions'
-import { useIdLookup } from '../useIdLookup'
 import { ChatAvatar } from './ChatAvatar'
 import { ConfirmSheet } from './ConfirmSheet'
-import { IdLookupField, PersonCard } from './IdLookup'
+import { canChangeMemberRole, canLeaveGroup, canRemoveMember, publicIdNumber } from './groupMembers'
+import { MemberSheet } from './MemberSheet'
+import { PeopleResults, PeopleSearchField, PersonResultRow } from './PeopleSearch'
+import { PhotoEditButton, PhotoSheet } from './PhotoSheet'
 import { MiniPill, RolePill } from './Pills'
 
-export type GroupSheet = 'info' | 'rename' | 'add' | 'remove' | 'leave' | 'delete'
+export type GroupSheet = 'info' | 'rename' | 'photo' | 'add' | 'member' | 'remove' | 'leave' | 'delete'
 
 interface GroupSheetsProps {
   sheet: GroupSheet | null
@@ -28,8 +30,9 @@ interface GroupSheetsProps {
 }
 
 /**
- * Group management, all as bottom sheets: info (participants + the actions this user may take) → rename · add
- * participant (ID lookup → confirm, optionally as manager) · remove (confirm) · leave (confirm) · delete (admin,
+ * Group management, all as bottom sheets. Info (photo, name, participants and the actions this user may take) →
+ * rename · photo (change/remove) · add member (live people search, optionally as administrator) · one participant
+ * (send a message; administrators: promote/demote, remove → confirm) · leave (confirm) · delete (platform admin,
  * destructive confirm). Archive/unarchive runs from the info sheet. The server enforces the same permissions.
  */
 export function GroupSheets({ sheet, openSheet, closeSheet, conversation, members, me }: GroupSheetsProps) {
@@ -38,7 +41,10 @@ export function GroupSheets({ sheet, openSheet, closeSheet, conversation, member
   const toast = useToast()
   const navigate = useNavigate()
   const actions = useGroupActions()
+  const directChats = useDirectChats()
+  /** Participant picked in the info sheet (snapshot: still named in the remove confirmation once they are gone). */
   const [target, setTarget] = useState<GroupMember | null>(null)
+  const liveTarget = target ? (members.find((m) => m.id === target.id) ?? null) : null
   const manage = canManageGroup(me, conversation)
   const id = conversation.id
   const backToInfo = () => openSheet('info')
@@ -59,10 +65,11 @@ export function GroupSheets({ sheet, openSheet, closeSheet, conversation, member
         members={members}
         me={me}
         onRename={() => openSheet('rename')}
+        onPhoto={() => openSheet('photo')}
         onAdd={() => openSheet('add')}
-        onRemove={(member) => {
+        onMember={(member) => {
           setTarget(member)
-          openSheet('remove')
+          openSheet('member')
         }}
         onLeave={() => openSheet('leave')}
         onDelete={() => openSheet('delete')}
@@ -77,6 +84,25 @@ export function GroupSheets({ sheet, openSheet, closeSheet, conversation, member
           backToInfo()
         }}
       />
+      <PhotoSheet
+        open={sheet === 'photo'}
+        onClose={backToInfo}
+        labels={{
+          title: t('chat.group.photo'),
+          choose: t('chat.group.choosePhoto'),
+          remove: t('chat.group.removePhoto'),
+          saving: t('chat.group.photoSaving'),
+          invalid: t('chat.group.photoInvalid'),
+        }}
+        photo={conversation.avatarPath}
+        group
+        onSave={async (image) => {
+          await actions.setGroupAvatar(id, image)
+          toast.show(t(image ? 'chat.group.photoUpdated' : 'chat.group.photoRemoved'))
+          backToInfo()
+        }}
+        errorMessage={errorMessage}
+      />
       <AddMemberSheet
         open={sheet === 'add'}
         onClose={backToInfo}
@@ -88,9 +114,28 @@ export function GroupSheets({ sheet, openSheet, closeSheet, conversation, member
           backToInfo()
         }}
       />
+      <MemberSheet
+        open={sheet === 'member'}
+        onClose={backToInfo}
+        member={liveTarget}
+        canChangeRole={liveTarget !== null && canChangeMemberRole(me, conversation, liveTarget)}
+        canRemove={liveTarget !== null && canRemoveMember(me, conversation, liveTarget)}
+        onMessage={async (member) => {
+          const conversationId = await directChats.startDirectConversation(member.publicId)
+          closeSheet()
+          void navigate(conversationPath(conversationId))
+        }}
+        onSetRole={async (member, role) => {
+          await actions.setMemberRole(id, member.id, role)
+          toast.show(t(role === 'manager' ? 'chat.group.madeAdmin' : 'chat.group.removedAdmin', { name: member.displayName }))
+          backToInfo()
+        }}
+        onRemove={() => openSheet('remove')}
+        errorMessage={errorMessage}
+      />
       <ConfirmSheet
         open={sheet === 'remove' && target !== null}
-        onClose={backToInfo}
+        onClose={() => openSheet(liveTarget ? 'member' : 'info')}
         title={t('chat.group.removeTitle')}
         body={t('chat.group.removeBody', { name: target?.displayName ?? '' })}
         confirmLabel={t('chat.group.removeConfirm')}
@@ -141,13 +186,14 @@ interface GroupInfoSheetProps {
   members: readonly GroupMember[]
   me: MyProfile
   onRename: () => void
+  onPhoto: () => void
   onAdd: () => void
-  onRemove: (member: GroupMember) => void
+  onMember: (member: GroupMember) => void
   onLeave: () => void
   onDelete: () => void
 }
 
-function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, onAdd, onRemove, onLeave, onDelete }: GroupInfoSheetProps) {
+function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, onPhoto, onAdd, onMember, onLeave, onDelete }: GroupInfoSheetProps) {
   const i18n = useI18n()
   const { t, tn, locale } = i18n
   const toast = useToast()
@@ -158,6 +204,9 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
   const manage = canManageGroup(me, conversation)
   const archived = conversation.archivedAt !== null
   const sorted = sortMembers(members, locale)
+  const others = members.filter((m) => m.id !== me.id)
+  // The summary knows the count before the participant list has loaded.
+  const loadingMembers = others.length === 0 && conversation.membersCount > 1
 
   const toggleArchive = async () => {
     if (archiving) return
@@ -173,8 +222,8 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
   }
 
   const rows = [
-    manage ? <ListRow key="rename" icon={Pencil} label={t('chat.group.rename')} onClick={onRename} /> : null,
     manage && !archived ? <ListRow key="add" icon={UserPlus} label={t('chat.group.addMember')} onClick={onAdd} /> : null,
+    manage ? <ListRow key="rename" icon={Pencil} label={t('chat.group.rename')} onClick={onRename} /> : null,
     manage ? (
       <ListRow
         key="archive"
@@ -186,16 +235,58 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
         onClick={() => void toggleArchive()}
       />
     ) : null,
-    conversation.allowLeave ? <ListRow key="leave" icon={LogOut} tone="danger" label={t('chat.group.leave')} trailing="none" onClick={onLeave} /> : null,
+    canLeaveGroup(me, conversation) ? <ListRow key="leave" icon={LogOut} tone="danger" label={t('chat.group.leave')} trailing="none" onClick={onLeave} /> : null,
     canDeleteGroup(me) ? <ListRow key="delete" icon={Trash2} tone="danger" label={t('chat.group.delete')} trailing="none" onClick={onDelete} /> : null,
   ].filter((row) => row !== null)
 
+  const avatar = <ChatAvatar group photo={conversation.avatarPath} size={64} />
+
+  let participants
+  if (loadingMembers) {
+    participants = (
+      <div role="status" aria-busy="true" className="glass overflow-hidden rounded-card">
+        <span className="sr-only">{t('common.status.loading')}</span>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex min-h-16 items-center gap-3 px-4 py-2.5">
+            <Skeleton width={36} height={36} radius={18} delay={i * 0.08} />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton width={`${58 - i * 8}%`} height={14} delay={i * 0.08} />
+              <Skeleton width={64} height={12} delay={i * 0.08 + 0.1} />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  } else if (others.length === 0) {
+    participants = <p className="m-0 mx-1 text-sm leading-[1.45] text-text2">{t('chat.group.emptyGroup')}</p>
+  } else {
+    participants = (
+      <ListGroup>
+        {sorted.map((member) => (
+          <MemberRow key={member.id} member={member} isMe={member.id === me.id} onOpen={member.id === me.id ? undefined : () => onMember(member)} />
+        ))}
+      </ListGroup>
+    )
+  }
+
   return (
     <Sheet open={open} onClose={onClose} title={conversationTitle(conversation, i18n)}>
-      <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-text3">
-        <span>{tn('chat.participants', conversation.membersCount)}</span>
-        {archived ? <MiniPill>{t('chat.list.archivedPill')}</MiniPill> : null}
-      </p>
+      <div className="flex items-center gap-3.5">
+        {manage && !archived ? (
+          <PhotoEditButton label={t(conversation.avatarPath ? 'chat.group.changePhoto' : 'chat.group.addPhoto')} onClick={onPhoto}>
+            {avatar}
+          </PhotoEditButton>
+        ) : (
+          avatar
+        )}
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="m-0 flex flex-wrap items-center gap-2 text-[15px] font-semibold text-text2">
+            <span>{tn('chat.participants', conversation.membersCount)}</span>
+            {archived ? <MiniPill>{t('chat.list.archivedPill')}</MiniPill> : null}
+          </p>
+          <p className="m-0 text-[13px] leading-[1.4] text-pretty text-text3">{t('chat.group.adminHint')}</p>
+        </div>
+      </div>
 
       {rows.length > 0 ? (
         <section aria-labelledby={actionsTitleId} className="flex flex-col gap-2">
@@ -206,50 +297,47 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
 
       <section aria-labelledby={membersTitleId} className="flex flex-col gap-2 pb-1">
         <ListSectionTitle id={membersTitleId}>{t('chat.group.participants')}</ListSectionTitle>
-        <ListGroup>
-          {sorted.map((member) => {
-            const isMe = member.id === me.id
-            return (
-              <ListRow
-                key={member.id}
-                leading={<ChatAvatar name={member.displayName} size={36} />}
-                label={
-                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                    <span className="break-words">{member.displayName}</span>
-                    {isMe ? <MiniPill>{t('chat.group.you')}</MiniPill> : null}
-                  </span>
-                }
-                description={
-                  <span className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-mono text-xs font-medium">{publicIdLabel(member.publicId)}</span>
-                    <RolePill role={member.role} />
-                    {member.memberRole === 'manager' ? (
-                      <MiniPill tone="primary">
-                        <ShieldCheck size={11} aria-hidden="true" className="mr-1 shrink-0" />
-                        {t('chat.group.manager')}
-                      </MiniPill>
-                    ) : null}
-                  </span>
-                }
-                trailing={
-                  manage && !isMe ? (
-                    <IconButton
-                      variant="plain"
-                      icon={UserMinus}
-                      aria-label={t('chat.group.removeMember', { name: member.displayName })}
-                      onClick={() => onRemove(member)}
-                      className="-mr-2"
-                    />
-                  ) : (
-                    'none'
-                  )
-                }
-              />
-            )
-          })}
-        </ListGroup>
+        {participants}
       </section>
     </Sheet>
+  )
+}
+
+/** "15 — Samuel Lopes" (+ "Tu") over the role pill (+ "Administrador"). Other participants open their options. */
+function MemberRow({ member, isMe, onOpen }: { member: GroupMember; isMe: boolean; onOpen?: () => void }) {
+  const { t } = useI18n()
+  const id = publicIdNumber(member.publicId)
+  return (
+    <ListRow
+      leading={<ChatAvatar name={member.displayName} photo={member.avatarPath} size={36} />}
+      label={
+        // Inline flow (not flex) so a long name wraps right after "12 —" instead of dropping to its own line.
+        <span className="leading-[1.35]">
+          {id ? (
+            <>
+              <span className="font-mono text-[13px] font-medium text-primary tabular-nums">{id}</span>
+              <span aria-hidden="true" className="text-text3">
+                {' — '}
+              </span>
+            </>
+          ) : null}
+          <span className="font-semibold">{member.displayName}</span>
+          {isMe ? <MiniPill className="ml-1.5 align-[1px]">{t('chat.group.you')}</MiniPill> : null}
+        </span>
+      }
+      description={
+        <span className="flex flex-wrap items-center gap-1.5">
+          <RolePill role={member.role} />
+          {member.memberRole === 'manager' ? (
+            <MiniPill tone="primary">
+              <ShieldCheck size={11} aria-hidden="true" className="mr-1 shrink-0" />
+              {t('chat.group.manager')}
+            </MiniPill>
+          ) : null}
+        </span>
+      }
+      onClick={onOpen}
+    />
   )
 }
 
@@ -319,7 +407,7 @@ interface AddMemberSheetProps {
   onClose: () => void
   conversationId: string
   members: readonly GroupMember[]
-  /** Offer "can also manage the group". */
+  /** Offer "also a group administrator". */
   allowManager: boolean
   onAdded: (name: string) => void
 }
@@ -334,44 +422,50 @@ function AddMemberSheet({ open, onClose, ...rest }: AddMemberSheetProps) {
   )
 }
 
+/**
+ * Same flow as "Adicionar pessoa": live search by ID or name, "Adicionar" on a result (Enter picks the exact ID).
+ * People already in the group are listed greyed out with a note. Optionally added as administrator.
+ */
 function AddMemberForm({ conversationId, members, allowManager, onAdded, inputRef }: Omit<AddMemberSheetProps, 'open' | 'onClose'> & { inputRef: RefObject<HTMLInputElement | null> }) {
   const i18n = useI18n()
   const { t } = i18n
   const actions = useGroupActions()
-  const lookup = useIdLookup(actions.lookupByPublicId, {
-    validate: (profile) => (members.some((m) => m.id === profile.id) ? t('chat.errors.already_member') : null),
-  })
+  const [query, setQuery] = useState('')
+  const search = usePeopleSearch(query)
   const [asManager, setAsManager] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [searchedAgain, setSearchedAgain] = useState(false)
-  const person = lookup.found
+  const memberIds = useMemo(() => new Set(members.map((m) => m.id)), [members])
 
-  const add = async () => {
-    if (!person || busy) return
-    setBusy(true)
+  const add = async (person: PersonSearchResult) => {
+    if (busyId !== null || memberIds.has(person.id)) return
+    setBusyId(person.id)
     setError(null)
     try {
       await actions.addMember(conversationId, person.publicId, allowManager && asManager)
       onAdded(person.displayName)
     } catch (err) {
       setError(chatErrorMessage(err, i18n, { notFound: 'person' }))
-      setBusy(false)
+      setBusyId(null)
     }
   }
 
-  if (!person) {
-    return (
-      <div className="pb-1">
-        <IdLookupField lookup={lookup} label={t('chat.lookup.idLabel')} inputRef={inputRef} autoFocus={searchedAgain} />
-      </div>
-    )
-  }
+  const exact = search.status === 'success' ? search.results.find((p) => p.exactIdMatch) : undefined
 
   return (
     <div className="flex flex-col gap-3.5 pb-1">
-      <p className="m-0 text-[13px] font-semibold text-text2">{t('chat.lookup.confirmTitle')}</p>
-      <PersonCard profile={person} />
+      <PeopleSearchField
+        value={query}
+        onChange={(value) => {
+          setQuery(value)
+          setError(null)
+        }}
+        label={t('chat.addPerson.idLabel')}
+        inputRef={inputRef}
+        onSubmit={() => {
+          if (exact) void add(exact)
+        }}
+      />
       {allowManager ? (
         <ListGroup>
           <ListSwitchRow icon={ShieldCheck} label={t('chat.group.asManager')} description={t('chat.group.asManagerHint')} checked={asManager} onCheckedChange={setAsManager} />
@@ -382,24 +476,35 @@ function AddMemberForm({ conversationId, members, allowManager, onAdded, inputRe
           {error}
         </p>
       ) : null}
-      <div className="flex flex-col gap-2.5 pt-1">
-        <Button icon={UserPlus} fullWidth loading={busy} onClick={() => void add()}>
-          {t('chat.group.confirmAdd')}
-        </Button>
-        <Button
-          variant="secondary"
-          fullWidth
-          disabled={busy}
-          onClick={() => {
-            setError(null)
-            setAsManager(false)
-            setSearchedAgain(true)
-            lookup.reset()
-          }}
-        >
-          {t('chat.lookup.searchAgain')}
-        </Button>
-      </div>
+      <PeopleResults
+        search={search}
+        title={t('chat.addPerson.results')}
+        renderPerson={(person) => {
+          const already = memberIds.has(person.id)
+          return (
+            <PersonResultRow
+              person={person}
+              disabledNote={already ? t('chat.errors.already_member') : undefined}
+              action={
+                already ? null : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={UserPlus}
+                    loading={busyId === person.id}
+                    disabled={busyId !== null && busyId !== person.id}
+                    aria-label={t('chat.group.addAria', { name: person.displayName })}
+                    onClick={() => void add(person)}
+                    className="shrink-0"
+                  >
+                    {t('chat.addPerson.add')}
+                  </Button>
+                )
+              }
+            />
+          )
+        }}
+      />
     </div>
   )
 }

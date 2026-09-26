@@ -18,15 +18,29 @@ import {
   parseMemberRow,
   parseMessageRow,
   parseMyProfile,
+  parsePersonSearchRow,
   parsePublicProfile,
 } from './mappers'
-import { CHAT_AUDIO_BUCKET, type ChatAudioMimeType, type ChatMessage, type ConversationSummary, type GroupMember, type MyProfile, type PublicProfile, type UserRole } from './types'
+import {
+  CHAT_AUDIO_BUCKET,
+  CHAT_AVATAR_BUCKET,
+  CHAT_LIMITS,
+  type ChatAudioMimeType,
+  type ChatMessage,
+  type ConversationSummary,
+  type GroupMember,
+  type MemberRole,
+  type MyProfile,
+  type PersonSearchResult,
+  type PublicProfile,
+  type UserRole,
+} from './types'
 import { isRecord } from '@/services/http'
 
 /** Columns of public.messages the client reads (all of them, named). */
 export const MESSAGE_COLUMNS = 'id,conversation_id,sender_id,kind,body,audio_path,audio_duration_ms,audio_mime,created_at'
 /** Columns of public.profiles other users may read (column privileges) that the chat needs. */
-export const PUBLIC_PROFILE_COLUMNS = 'id,public_id,display_name,role'
+export const PUBLIC_PROFILE_COLUMNS = 'id,public_id,display_name,role,avatar_path'
 
 export const MESSAGES_PAGE_SIZE = 50
 /** Signed URLs live 5 min; callers cache them ~4 min. */
@@ -125,18 +139,74 @@ export async function fetchProfiles(ids: readonly string[]): Promise<PublicProfi
   return parseList(data, (row) => parsePublicProfile(row))
 }
 
-export async function lookupProfileByPublicId(publicId: number): Promise<PublicProfile> {
+/** People directory: by ID ("07" → exact ID first, then IDs starting with 7) or by name. Never includes me. */
+export async function searchProfiles(query: string, limit: number = CHAT_LIMITS.searchResultsLimit): Promise<PersonSearchResult[]> {
   const sb = requireClient()
-  const data = await call(() => sb.rpc('lookup_profile_by_public_id', { p_public_id: publicId }))
-  const rows = Array.isArray(data) ? data : [data]
-  const profile = parsePublicProfile(rows[0])
-  if (!profile) throw new ChatError('not-found', 'not_found')
-  return profile
+  const data = await call(() => sb.rpc('search_profiles', { p_query: query, p_limit: limit }))
+  return parseList(data, parsePersonSearchRow)
+}
+
+// ---------------------------------------------------------------------------
+// Photos (public bucket `avatars`)
+// ---------------------------------------------------------------------------
+
+/** Public URL of a photo (no request). null when chat is not configured. */
+export function avatarPublicUrl(path: string): string | null {
+  const sb = getSupabase()
+  if (!sb) return null
+  return sb.storage.from(CHAT_AVATAR_BUCKET).getPublicUrl(path).data.publicUrl || null
+}
+
+/** Uploads a new photo object (never overwrites: every photo gets a new random name). */
+export async function uploadAvatar(path: string, jpeg: Blob): Promise<void> {
+  const sb = requireClient()
+  const body = jpeg.type === 'image/jpeg' ? jpeg : new Blob([jpeg], { type: 'image/jpeg' })
+  let res: SupabaseResult
+  try {
+    res = await sb.storage.from(CHAT_AVATAR_BUCKET).upload(path, body, { contentType: 'image/jpeg', upsert: false, cacheControl: '31536000' })
+  } catch (err) {
+    throw toChatError(err)
+  }
+  if (res.error && isAlreadyExists(res.error)) return
+  unwrap(res)
+}
+
+/** Best effort: removes a photo object that is no longer used (errors are ignored). */
+export async function removeAvatarObject(path: string): Promise<void> {
+  const sb = getSupabase()
+  if (!sb) return
+  try {
+    await sb.storage.from(CHAT_AVATAR_BUCKET).remove([path])
+  } catch {
+    // an orphan photo only costs storage
+  }
+}
+
+/** Sets (path) or removes (null) my photo. The object must already be uploaded. Returns the stored path. */
+export async function setMyAvatar(path: string | null): Promise<string | null> {
+  const sb = requireClient()
+  const data = await call(() => sb.rpc('set_my_avatar', path ? { p_path: path } : {}))
+  return typeof data === 'string' && data ? data : null
+}
+
+/** Group administrators: sets (path) or removes (null) the group photo. Returns the stored path. */
+export async function setGroupAvatar(conversationId: string, path: string | null): Promise<string | null> {
+  const sb = requireClient()
+  const data = await call(() => sb.rpc('set_group_avatar', path ? { p_conversation: conversationId, p_path: path } : { p_conversation: conversationId }))
+  return typeof data === 'string' && data ? data : null
 }
 
 // ---------------------------------------------------------------------------
 // Conversations
 // ---------------------------------------------------------------------------
+
+/** Opens (creates or reactivates) the direct conversation with the person behind a public ID. Returns its id. */
+export async function startDirectConversation(publicId: number): Promise<string> {
+  const sb = requireClient()
+  const data = await call(() => sb.rpc('start_direct_conversation', { p_public_id: publicId }))
+  if (!isUuid(data)) throw new ChatError('unknown')
+  return data
+}
 
 /** All my conversations, archived included (the list RPC already aggregates last message + unread). */
 export async function listMyConversations(): Promise<ConversationSummary[]> {
@@ -304,25 +374,15 @@ export async function removeGroupMember(conversationId: string, userId: string):
   await call(() => sb.rpc('remove_group_member', { p_conversation: conversationId, p_user_id: userId }))
 }
 
+/** Promote ('manager' = group administrator) or demote ('member') a participant. */
+export async function setGroupMemberRole(conversationId: string, userId: string, role: MemberRole): Promise<void> {
+  const sb = requireClient()
+  await call(() => sb.rpc('set_group_member_role', { p_conversation: conversationId, p_user_id: userId, p_role: role }))
+}
+
 export async function leaveGroup(conversationId: string): Promise<void> {
   const sb = requireClient()
   await call(() => sb.rpc('leave_group', { p_conversation: conversationId }))
-}
-
-// ---------------------------------------------------------------------------
-// Student ↔ monitor
-// ---------------------------------------------------------------------------
-
-export async function associateStudent(studentPublicId: number): Promise<string> {
-  const sb = requireClient()
-  const data = await call(() => sb.rpc('associate_student', { p_student_public_id: studentPublicId }))
-  if (!isUuid(data)) throw new ChatError('unknown')
-  return data
-}
-
-export async function removeStudentAssociation(studentId: string): Promise<void> {
-  const sb = requireClient()
-  await call(() => sb.rpc('remove_student_association', { p_student_id: studentId }))
 }
 
 // ---------------------------------------------------------------------------
@@ -356,11 +416,6 @@ export async function adminListUsers(search: string | null, limit = 100): Promis
 export async function adminVerifyMonitor(userId: string, verified: boolean): Promise<void> {
   const sb = requireClient()
   await call(() => sb.rpc('admin_verify_monitor', { p_user_id: userId, p_verified: verified }))
-}
-
-export async function adminSetCanManageGroups(userId: string, value: boolean): Promise<void> {
-  const sb = requireClient()
-  await call(() => sb.rpc('admin_set_can_manage_groups', { p_user_id: userId, p_value: value }))
 }
 
 export async function adminSetRole(userId: string, role: Extract<UserRole, 'student' | 'monitor'>): Promise<void> {
