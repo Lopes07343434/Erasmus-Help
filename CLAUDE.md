@@ -121,7 +121,7 @@ Projeto: `nankvmfyyncoopoxqibm` (`https://nankvmfyyncoopoxqibm.supabase.co`). Fr
 
 ## Deploy (produção)
 
-`https://erasmus.help.pontodigital.eu` — VPS Hostinger (Ubuntu 24.04, `76.13.37.156`) com Coolify. Cada push para `main` corre `.github/workflows/deploy.yml`: lint + testes + build → upload por SSH (secret do repositório `DEPLOY_SSH_KEY`, chave `memoryx-deploy-claude`) → `deploy/remote-deploy.sh`.
+`https://erasmus-help.pontodigital.eu` — VPS Hostinger (Ubuntu 24.04, `76.13.37.156`) com Coolify. Cada push para `main` corre `.github/workflows/deploy.yml`: lint + testes + build → upload por SSH (secret do repositório `DEPLOY_SSH_KEY`, chave `memoryx-deploy-claude`) → `deploy/remote-deploy.sh`.
 - Um contentor `erasmus-help-web` (Caddy, só ficheiros estáticos, `deploy/Caddyfile`) na rede Docker `coolify`, publicado pelo proxy **existente** do Coolify com labels (Traefik ou Caddy detetado); o proxy trata do certificado Let's Encrypt. Nunca instalar outro Nginx/proxy, nem mexer nas portas 80/443, na firewall ou na autenticação SSH.
 - `/opt/erasmus-help/releases/<id>` (últimas 5) + symlink atómico `current`; health check (contentor + proxy) com rollback automático; recusa se o domínio já pertencer a outro contentor ou se o proxy não estiver a correr.
 - Rollback manual: `ln -sfn releases/<id-anterior> /opt/erasmus-help/current`.
