@@ -63,7 +63,7 @@ describe('useChatNotifications', () => {
     await waitFor(() => expect(onNotice).toHaveBeenCalledTimes(1))
     expect(onNotice).toHaveBeenCalledWith({ conversationId: GROUP, kind: 'group', title: 'Erasmus Milano', senderName: 'Carla', preview: null, audioDurationMs: 4200 })
     const q = fake.queries.find((x) => x.table === 'profiles')
-    expect(q?.columns).toBe('id,public_id,display_name,role')
+    expect(q?.columns).toBe('id,public_id,display_name,role,avatar_path')
     expect(q?.ops).toContainEqual(['in', 'id', [THIRD]])
   })
 

@@ -4,6 +4,18 @@ export default {
   identity: {
     noLocation: 'Localização por definir',
   },
+  photo: {
+    add: 'Adicionar foto',
+    change: 'Mudar foto',
+    remove: 'Remover foto',
+    menuTitle: 'Foto de perfil',
+    choose: 'Escolher foto',
+    updated: 'Foto de perfil atualizada',
+    removed: 'Foto de perfil removida',
+    saving: 'A guardar a foto…',
+    invalid: 'Não foi possível usar esta imagem. Escolhe uma foto em JPG, PNG ou WebP.',
+    unavailable: 'Podes adicionar uma foto quando o chat estiver ligado.',
+  },
   sections: {
     data: 'Os teus dados',
     privacy: 'Privacidade',
@@ -33,8 +45,8 @@ export default {
       body: 'O teu perfil e as tuas preferências são guardados só neste browser (armazenamento local). Não te acompanham se mudares de dispositivo ou se limpares os dados do browser.',
     },
     account: {
-      title: 'Ainda não há contas',
-      body: 'Nesta versão não precisas de criar conta nem de iniciar sessão, por isso não guardamos os teus dados em nenhuma conta.',
+      title: 'Conta do chat',
+      body: 'Para usares o chat, a app cria automaticamente uma conta anónima ligada a este dispositivo, sem email nem palavra-passe. O teu nome, função, ID e foto ficam visíveis para quem usa o chat; as mensagens, só para os participantes de cada conversa.',
     },
     audio: {
       title: 'O áudio não é guardado',

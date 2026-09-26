@@ -5,4 +5,5 @@
  */
 export { signOutChat } from './session'
 export { ChatError, getChatErrorDetail, toChatError, type ChatErrorDetail } from './errors'
-export { formatPublicId, parsePublicId } from './types'
+export { formatPublicId, formatPublicIdNumber, isPublicIdQuery, parsePublicId } from './types'
+export { avatarUrl } from './avatars'

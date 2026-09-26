@@ -212,7 +212,7 @@ function GroupInfoSheet({ open, onClose, conversation, members, me, onRename, on
             return (
               <ListRow
                 key={member.id}
-                leading={<ChatAvatar name={member.displayName} size={36} />}
+                leading={<ChatAvatar name={member.displayName} photo={member.avatarPath} size={36} />}
                 label={
                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
                     <span className="break-words">{member.displayName}</span>

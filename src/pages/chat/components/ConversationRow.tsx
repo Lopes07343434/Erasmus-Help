@@ -52,7 +52,7 @@ export const ConversationRow = memo(function ConversationRow({ conversation, meI
         hasUnread && 'bg-primary/6',
       )}
     >
-      <ChatAvatar name={title} group={group} />
+      <ChatAvatar name={title} group={group} photo={group ? conversation.avatarPath : (other?.avatarPath ?? null)} />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex min-w-0 items-center gap-2">
           <span className={cn('min-w-0 truncate text-[15px] leading-[1.25]', hasUnread ? 'font-bold' : 'font-semibold')}>{title}</span>

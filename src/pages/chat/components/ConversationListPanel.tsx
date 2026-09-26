@@ -6,8 +6,8 @@ import { useConversations } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { ConversationKind, MyProfile } from '@/services/chat/types'
 import { useNow } from '../chatHooks'
-import { canAddStudents, canCreateGroups, isPendingMonitor } from '../chatPermissions'
-import { ConversationListSkeleton, PendingMonitorBanner, StudentNoMonitor } from './ChatStates'
+import { canCreateGroups } from '../chatPermissions'
+import { ConversationListSkeleton, StudentNoMonitor } from './ChatStates'
 import { ConversationRow } from './ConversationRow'
 
 interface ConversationListPanelProps {
@@ -32,9 +32,7 @@ export function ConversationListPanel({ kind, me, offline = false, onAddStudent,
   const hasItems = list.items.length > 0
 
   const action = direct
-    ? canAddStudents(me)
-      ? { label: t('chat.actions.addStudent'), icon: UserPlus, onClick: onAddStudent }
-      : null
+    ? { label: t('chat.actions.addPerson'), icon: UserPlus, onClick: onAddStudent }
     : canCreateGroups(me)
       ? { label: t('chat.actions.createGroup'), icon: Plus, onClick: onCreateGroup }
       : null
@@ -94,7 +92,6 @@ export function ConversationListPanel({ kind, me, offline = false, onAddStudent,
 
   return (
     <div className="flex flex-col gap-3.5">
-      {isPendingMonitor(me) ? <PendingMonitorBanner /> : null}
       {body}
     </div>
   )

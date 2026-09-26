@@ -5,6 +5,18 @@ const profile: NamespaceShape<'profile'> = {
   identity: {
     noLocation: 'Nie ustawiono lokalizacji',
   },
+  photo: {
+    add: 'Dodaj zdjęcie',
+    change: 'Zmień zdjęcie',
+    remove: 'Usuń zdjęcie',
+    menuTitle: 'Zdjęcie profilowe',
+    choose: 'Wybierz zdjęcie',
+    updated: 'Zaktualizowano zdjęcie profilowe',
+    removed: 'Usunięto zdjęcie profilowe',
+    saving: 'Zapisywanie zdjęcia…',
+    invalid: 'Nie można użyć tego obrazu. Wybierz zdjęcie JPG, PNG lub WebP.',
+    unavailable: 'Zdjęcie możesz dodać po połączeniu z czatem.',
+  },
   sections: {
     data: 'Twoje dane',
     privacy: 'Prywatność',
@@ -34,8 +46,8 @@ const profile: NamespaceShape<'profile'> = {
       body: 'Twój profil i preferencje są zapisane tylko w tej przeglądarce (pamięć lokalna). Nie przenoszą się na inne urządzenie i znikną, jeśli wyczyścisz dane przeglądarki.',
     },
     account: {
-      title: 'Na razie bez kont',
-      body: 'W tej wersji nie musisz zakładać konta ani się logować, więc Twoje dane nie są przechowywane na żadnym koncie.',
+      title: 'Konto czatu',
+      body: 'Aby korzystać z czatu, aplikacja automatycznie tworzy anonimowe konto powiązane z tym urządzeniem, bez e-maila i hasła. Twoje imię, rola, ID i zdjęcie są widoczne dla osób korzystających z czatu, a wiadomości tylko dla uczestników danej rozmowy.',
     },
     audio: {
       title: 'Nagrania nie są zapisywane',

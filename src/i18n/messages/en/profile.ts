@@ -5,6 +5,18 @@ const profile: NamespaceShape<'profile'> = {
   identity: {
     noLocation: 'Location not set',
   },
+  photo: {
+    add: 'Add photo',
+    change: 'Change photo',
+    remove: 'Remove photo',
+    menuTitle: 'Profile photo',
+    choose: 'Choose photo',
+    updated: 'Profile photo updated',
+    removed: 'Profile photo removed',
+    saving: 'Saving photo…',
+    invalid: "Couldn't use this image. Pick a JPG, PNG or WebP photo.",
+    unavailable: 'You can add a photo once the chat is connected.',
+  },
   sections: {
     data: 'Your details',
     privacy: 'Privacy',
@@ -34,8 +46,8 @@ const profile: NamespaceShape<'profile'> = {
       body: 'Your profile and preferences are stored only in this browser (local storage). They don’t follow you to another device, and they’re lost if you clear your browser data.',
     },
     account: {
-      title: 'No accounts yet',
-      body: 'In this version you don’t need to create an account or sign in, so your data isn’t kept in any account.',
+      title: 'Chat account',
+      body: 'To use the chat, the app automatically creates an anonymous account linked to this device, with no email or password. Your name, role, ID and photo are visible to people who use the chat; messages only to the participants of each conversation.',
     },
     audio: {
       title: 'Audio isn’t stored',

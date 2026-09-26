@@ -5,7 +5,7 @@ import type { I18nValue } from '@/i18n/I18nProvider'
 import { AppError } from '@/services/errors'
 import { chatErrorCode, chatErrorMessage } from './chatErrors'
 import { calendarDaysAgo, formatDayLabel, formatListTime, groupByDay, lastMessageParts, previewLine, publicIdLabel, sortMembers } from './chatFormat'
-import { canCreateGroups, canManageGroup, isPendingMonitor } from './chatPermissions'
+import { canCreateGroups, canDeleteGroup, canManageGroup } from './chatPermissions'
 import { makeMe, member, MONITOR, STUDENT_ANA } from './testFixtures'
 
 let i18n: Pick<I18nValue, 't' | 'formatDate'>
@@ -84,7 +84,8 @@ describe('previews', () => {
   })
 
   it('formats public IDs without throwing', () => {
-    expect(publicIdLabel(7)).toBe('ID 07')
+    expect(publicIdLabel(7)).toBe('ID: 07')
+    expect(publicIdLabel(15)).toBe('ID: 15')
     expect(publicIdLabel(0)).toBe('')
   })
 
@@ -95,15 +96,16 @@ describe('previews', () => {
 })
 
 describe('permissions', () => {
-  it('create/manage groups need admin or a verified monitor with the permission', () => {
-    expect(canCreateGroups(makeMe({ role: 'admin' }))).toBe(true)
-    expect(canCreateGroups(makeMe({ role: 'monitor', monitorStatus: 'verified', canManageGroups: true }))).toBe(true)
-    expect(canCreateGroups(makeMe({ role: 'monitor', monitorStatus: 'pending', canManageGroups: true }))).toBe(false)
-    expect(canCreateGroups(makeMe({ role: 'student' }))).toBe(false)
-    const verified = makeMe({ role: 'monitor', monitorStatus: 'verified', canManageGroups: true })
-    expect(canManageGroup(verified, { myRole: 'manager' })).toBe(true)
-    expect(canManageGroup(verified, { myRole: 'member' })).toBe(false)
-    expect(isPendingMonitor(makeMe({ role: 'monitor', monitorStatus: 'pending' }))).toBe(true)
+  it('anyone creates groups; group administrators or platform admins manage them', () => {
+    // everyone with a chat account can create groups; group administrators (or platform admins) manage them
+    expect(canCreateGroups(makeMe({ role: 'student' }))).toBe(true)
+    expect(canCreateGroups(makeMe({ role: 'monitor', monitorStatus: 'pending' }))).toBe(true)
+    expect(canCreateGroups(null)).toBe(false)
+    expect(canManageGroup(makeMe({ role: 'student' }), { myRole: 'manager' })).toBe(true)
+    expect(canManageGroup(makeMe({ role: 'monitor', monitorStatus: 'verified' }), { myRole: 'member' })).toBe(false)
+    expect(canManageGroup(makeMe({ role: 'admin' }), { myRole: 'member' })).toBe(true)
+    expect(canDeleteGroup(makeMe({ role: 'admin' }))).toBe(true)
+    expect(canDeleteGroup(makeMe({ role: 'student' }))).toBe(false)
   })
 })
 
@@ -117,8 +119,8 @@ describe('chat errors', () => {
   })
 
   it('maps to localized, non-technical messages', () => {
-    expect(chatErrorMessage({ chatCode: 'not_found' }, i18n)).toBe('Não encontrámos ninguém com esse ID')
-    expect(chatErrorMessage(new AppError('not-found'), i18n, { notFound: 'person' })).toBe('Não encontrámos ninguém com esse ID')
+    expect(chatErrorMessage({ chatCode: 'not_found' }, i18n)).toBe('Nenhum utilizador encontrado com esse ID.')
+    expect(chatErrorMessage(new AppError('not-found'), i18n, { notFound: 'person' })).toBe('Nenhum utilizador encontrado com esse ID.')
     expect(chatErrorMessage(new AppError('offline'), i18n)).toBe('Sem ligação à internet')
     expect(chatErrorMessage(new Error('duplicate key value violates…'), i18n)).toBe('Algo correu mal')
   })

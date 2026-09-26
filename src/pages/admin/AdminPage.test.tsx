@@ -12,8 +12,8 @@ import AdminPage from './AdminPage'
 
 vi.mock('@/hooks/chat', async () => (await import('@/pages/chat/testFixtures')).chatHooksMock)
 
-const pendingMonitor: AdminUserRow = { id: 'u-m2', publicId: 4, displayName: 'Marta Reis', role: 'monitor', monitorStatus: 'pending', canManageGroups: false, monitor: null }
-const student: AdminUserRow = { id: 'u-s', publicId: 12, displayName: 'Ana Costa', role: 'student', monitorStatus: null, canManageGroups: false, monitor: MONITOR }
+const pendingMonitor: AdminUserRow = { id: 'u-m2', publicId: 4, displayName: 'Marta Reis', role: 'monitor', avatarPath: null, monitorStatus: 'pending', canManageGroups: false, monitor: null }
+const student: AdminUserRow = { id: 'u-s', publicId: 12, displayName: 'Ana Costa', role: 'student', avatarPath: null, monitorStatus: null, canManageGroups: false, monitor: MONITOR }
 
 function renderAdmin() {
   return render(
@@ -50,7 +50,7 @@ describe('AdminPage', () => {
     renderAdmin()
 
     expect(screen.getByText('Por verificar')).toBeInTheDocument()
-    expect(screen.getByText('Monitor: João Pereira (ID 03)')).toBeInTheDocument()
+    expect(screen.getByText('Monitor: João Pereira (ID: 03)')).toBeInTheDocument()
 
     await user.type(screen.getByRole('searchbox', { name: 'Pesquisar utilizadores' }), 'Marta')
     expect(admin.search).toHaveBeenLastCalledWith('Marta')

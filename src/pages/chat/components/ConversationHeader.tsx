@@ -43,7 +43,7 @@ export function ConversationHeader({ conversation, onOpenInfo }: ConversationHea
         aria-label={`${t('chat.actions.groupInfo')}: ${title}, ${tn('chat.participants', conversation.membersCount)}`}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-control border-0 bg-transparent px-1 py-1 text-left text-text transition-colors duration-150 hover:bg-primary-soft focus-visible:-outline-offset-2"
       >
-        <ChatAvatar group size={40} />
+        <ChatAvatar group photo={conversation.avatarPath} size={40} />
         <span aria-hidden="true" className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate text-base leading-[1.25] font-bold">{title}</span>
           <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-text3">
@@ -56,7 +56,7 @@ export function ConversationHeader({ conversation, onOpenInfo }: ConversationHea
   } else if (conversation) {
     identity = (
       <div className="flex min-w-0 flex-1 items-center gap-3 px-1 py-1">
-        <ChatAvatar name={title} size={40} />
+        <ChatAvatar name={title} photo={other?.avatarPath ?? null} size={40} />
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="m-0 truncate text-base leading-[1.25] font-bold">{title}</p>
           {other ? (

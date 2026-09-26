@@ -231,7 +231,7 @@ describe('ConversationPage', () => {
     info = await screen.findByRole('dialog', { name: 'Erasmus Milão' })
     await user.click(within(info).getByRole('button', { name: 'Adicionar participante' }))
     const add = await screen.findByRole('dialog', { name: 'Adicionar participante' })
-    groupActions.lookupByPublicId.mockResolvedValueOnce({ id: 'u-new', publicId: 21, displayName: 'Bruno Lima', role: 'student' })
+    groupActions.lookupByPublicId.mockResolvedValueOnce({ id: 'u-new', publicId: 21, displayName: 'Bruno Lima', role: 'student', avatarPath: null })
     await user.type(within(add).getByRole('textbox', { name: 'ID' }), 'id 21{Enter}')
     expect(await within(add).findByText('Bruno Lima')).toBeInTheDocument()
     await user.click(within(add).getByRole('switch', { name: /Também pode gerir o grupo/ }))

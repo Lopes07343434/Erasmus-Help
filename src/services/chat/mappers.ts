@@ -18,8 +18,10 @@ import {
   type MemberRole,
   type MonitorStatus,
   type MyProfile,
+  type PersonSearchResult,
   type PublicProfile,
   type UserRole,
+  isPublicIdQuery,
 } from './types'
 
 // ---------------------------------------------------------------------------
@@ -48,6 +50,14 @@ const isMemberRole = (v: unknown): v is MemberRole => v === 'member' || v === 'm
 const isMonitorStatus = (v: unknown): v is MonitorStatus => v === 'pending' || v === 'verified'
 const isKind = (v: unknown): v is ConversationKind => v === 'direct' || v === 'group'
 export const isChatAudioMime = (v: unknown): v is ChatAudioMimeType => typeof v === 'string' && (CHAT_AUDIO_MIME_TYPES as readonly string[]).includes(v)
+
+/** Photo object path of a person (`users/{id}/…`) or a group (`groups/{id}/…`) — mirrors private.avatar_path_ok. */
+export function avatarPathOf(scope: 'users' | 'groups', ownerId: string, v: unknown): string | null {
+  if (typeof v !== 'string' || !isUuid(ownerId)) return null
+  const re = /^(users|groups)\/([0-9a-f-]{36})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/
+  const m = re.exec(v)
+  return m && m[1] === scope && m[2] === ownerId ? v : null
+}
 
 // ---------------------------------------------------------------------------
 // Timestamps (Postgres timestamptz keeps microseconds: compare with full precision)
@@ -107,6 +117,14 @@ export function previewOf(body: string): string {
   return [...body.replace(/\s+/g, ' ')].slice(0, CHAT_LIMITS.previewMaxLength).join('')
 }
 
+/** What search_profiles would search for (cleaned, ≤ 60 chars), or null when there is nothing to search yet (empty, "0", a 1-letter name). */
+export function searchableQuery(raw: string): string | null {
+  const q = [...cleanLine(typeof raw === 'string' ? raw : '')].slice(0, CHAT_LIMITS.searchMaxLength).join('').trim()
+  if (!q) return null
+  if (isPublicIdQuery(q)) return /[1-9]/.test(q) ? q : null
+  return codePointLength(q) >= CHAT_LIMITS.searchMinNameLength ? q : null
+}
+
 // ---------------------------------------------------------------------------
 // Input validation (throws ChatError('invalid-input'))
 // ---------------------------------------------------------------------------
@@ -141,14 +159,21 @@ export function validateUuid(v: unknown): string {
 // Row parsers
 // ---------------------------------------------------------------------------
 
-/** { id, public_id, display_name, role } (lookup RPC, profiles select, list other_user). */
+/** { id, public_id, display_name, role, avatar_path? } (lookup/search RPCs, profiles select, list other_user). A malformed photo path is dropped, not the person. */
 export function parsePublicProfile(row: unknown, idKey = 'id'): PublicProfile | null {
   if (!isRecord(row)) return null
   const id = row[idKey]
   const publicId = publicIdOf(row.public_id)
   const displayName = nonEmpty(row.display_name)
   if (!isUuid(id) || publicId === null || displayName === null || !isUserRole(row.role)) return null
-  return { id, publicId, displayName, role: row.role }
+  return { id, publicId, displayName, role: row.role, avatarPath: avatarPathOf('users', id, row.avatar_path) }
+}
+
+/** One row of rpc search_profiles. */
+export function parsePersonSearchRow(row: unknown): PersonSearchResult | null {
+  const profile = parsePublicProfile(row)
+  if (!profile || !isRecord(row)) return null
+  return { ...profile, exactIdMatch: row.exact_id_match === true }
 }
 
 /** Full own profile (get_my_profile / upsert_my_profile). */
@@ -207,6 +232,7 @@ export function parseConversationRow(row: unknown): ConversationSummary | null {
     id,
     kind: row.kind,
     name,
+    avatarPath: row.kind === 'group' ? avatarPathOf('groups', id, row.avatar_path) : null,
     allowLeave,
     archivedAt,
     myRole: row.my_role,
@@ -281,6 +307,8 @@ export interface ConversationRowUpdate {
   allowLeave: boolean | null
   archivedAt: string | null
   lastMessageAt: string | null
+  /** undefined when the payload has no avatar_path column (older schema); null = no photo. */
+  avatarPath: string | null | undefined
 }
 
 export function parseConversationUpdate(row: unknown): ConversationRowUpdate | null {
@@ -291,6 +319,7 @@ export function parseConversationUpdate(row: unknown): ConversationRowUpdate | n
     allowLeave: bool(row.allow_leave),
     archivedAt: row.archived_at == null ? null : timestamp(row.archived_at),
     lastMessageAt: row.last_message_at == null ? null : timestamp(row.last_message_at),
+    avatarPath: 'avatar_path' in row ? avatarPathOf('groups', row.id, row.avatar_path) : undefined,
   }
 }
 

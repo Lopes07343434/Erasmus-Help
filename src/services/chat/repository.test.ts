@@ -21,7 +21,7 @@ describe('explicit column lists', () => {
     await repo.fetchMessagesPage(DIRECT)
     for (const q of fake.queries) expect(q.columns).not.toContain('*')
     const [profiles, messages] = fake.queries
-    expect(profiles).toMatchObject({ table: 'profiles', columns: 'id,public_id,display_name,role' })
+    expect(profiles).toMatchObject({ table: 'profiles', columns: 'id,public_id,display_name,role,avatar_path' })
     expect(profiles?.ops).toContainEqual(['in', 'id', [OTHER]]) // deduped, invalid ids dropped
     expect(messages?.columns).toBe('id,conversation_id,sender_id,kind,body,audio_path,audio_duration_ms,audio_mime,created_at')
   })
@@ -122,7 +122,7 @@ describe('RPCs', () => {
 
   it('lookup returns the public profile or not-found', async () => {
     fake.rpc.lookup_profile_by_public_id = () => ok([profileRow(OTHER, 12, 'Bruno')])
-    await expect(repo.lookupProfileByPublicId(12)).resolves.toEqual({ id: OTHER, publicId: 12, displayName: 'Bruno', role: 'student' })
+    await expect(repo.lookupProfileByPublicId(12)).resolves.toEqual({ id: OTHER, publicId: 12, displayName: 'Bruno', role: 'student', avatarPath: null })
     fake.rpc.lookup_profile_by_public_id = () => ok([])
     await expect(repo.lookupProfileByPublicId(12)).rejects.toMatchObject({ code: 'not-found' })
   })
