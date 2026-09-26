@@ -1,4 +1,4 @@
-# Erasmus Help → https://erasmus.help.pontodigital.eu (Hostinger VPS, behind the existing Coolify proxy).
+# Erasmus Help → https://erasmus-help.pontodigital.eu (Hostinger VPS, behind the existing Coolify proxy).
 #
 # Every push to main (or "Run workflow"): lint + unit tests + production build, then the build is
 # uploaded over SSH and activated by deploy/remote-deploy.sh (keeps the previous releases, health
@@ -25,7 +25,7 @@ env:
   DEPLOY_HOST: 76.13.37.156
   DEPLOY_PORT: '22'
   DEPLOY_USER: root
-  DOMAIN: erasmus.help.pontodigital.eu
+  DOMAIN: erasmus-help.pontodigital.eu
   APP_DIR: /opt/erasmus-help
 
 jobs:

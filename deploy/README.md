@@ -1,4 +1,4 @@
-# Deploy — https://erasmus.help.pontodigital.eu
+# Deploy — https://erasmus-help.pontodigital.eu
 
 Site estático (build do Vite) servido por um contentor Caddy pequeno no VPS, publicado pelo **proxy que o Coolify já tem** (Traefik ou Caddy). O proxy trata do certificado Let's Encrypt.
 
@@ -6,7 +6,7 @@ Site estático (build do Vite) servido por um contentor Caddy pequeno no VPS, pu
 |---|---|
 | VPS | Hostinger 1327038 · KVM 4 · Ubuntu 24.04 · `76.13.37.156` |
 | SSH | `root@76.13.37.156` porta 22, autenticação por chave |
-| DNS | `A erasmus.help → 76.13.37.156` (zona `pontodigital.eu`) |
+| DNS | `A erasmus-help → 76.13.37.156` (zona `pontodigital.eu`) |
 | No servidor | `/opt/erasmus-help/releases/<id>` (últimas 5) · symlink `current` · contentor `erasmus-help-web` na rede `coolify` |
 
 **Nunca:** instalar ou configurar outro Nginx; parar, substituir ou reconfigurar o proxy do Coolify; mexer nas portas 80/443, na firewall ou na autenticação SSH (a autenticação por password fica ativa); alterar outras apps do VPS (ex.: 76 Garage).
@@ -28,12 +28,12 @@ $SSH "mkdir -p /opt/erasmus-help/incoming/$RELEASE"
 scp -i <chave-privada> release.tar.gz deploy/Caddyfile deploy/remote-deploy.sh root@76.13.37.156:/opt/erasmus-help/incoming/$RELEASE/
 
 # 3. Ativação (health check + rollback automático)
-$SSH "DOMAIN=erasmus.help.pontodigital.eu APP_DIR=/opt/erasmus-help bash /opt/erasmus-help/incoming/$RELEASE/remote-deploy.sh $RELEASE /opt/erasmus-help/incoming/$RELEASE/release.tar.gz; rc=\$?; rm -rf /opt/erasmus-help/incoming/$RELEASE; exit \$rc"
+$SSH "DOMAIN=erasmus-help.pontodigital.eu APP_DIR=/opt/erasmus-help bash /opt/erasmus-help/incoming/$RELEASE/remote-deploy.sh $RELEASE /opt/erasmus-help/incoming/$RELEASE/release.tar.gz; rc=\$?; rm -rf /opt/erasmus-help/incoming/$RELEASE; exit \$rc"
 
 # 4. Verificação (no 1.º deploy o certificado pode demorar ~1 min)
-curl -sSI https://erasmus.help.pontodigital.eu/        # 200, certificado válido (sem -k)
-curl -sSI https://erasmus.help.pontodigital.eu/chat    # 200 (rota da app)
-curl -sSI http://erasmus.help.pontodigital.eu/         # 301 → https
+curl -sSI https://erasmus-help.pontodigital.eu/        # 200, certificado válido (sem -k)
+curl -sSI https://erasmus-help.pontodigital.eu/chat    # 200 (rota da app)
+curl -sSI http://erasmus-help.pontodigital.eu/         # 301 → https
 ```
 
 O mesmo procedimento corre automaticamente em cada push para `main` (`.github/workflows/deploy.yml`) quando o repositório tem o secret `DEPLOY_SSH_KEY`; sem ele o workflow só faz lint, testes e build.

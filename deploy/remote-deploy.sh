@@ -23,7 +23,7 @@
 # =============================================================================
 set -Eeuo pipefail
 
-DOMAIN="${DOMAIN:-erasmus.help.pontodigital.eu}"
+DOMAIN="${DOMAIN:-erasmus-help.pontodigital.eu}"
 APP_DIR="${APP_DIR:-/opt/erasmus-help}"
 CONTAINER="${CONTAINER:-erasmus-help-web}"
 IMAGE="${IMAGE:-caddy:2.8-alpine}"
