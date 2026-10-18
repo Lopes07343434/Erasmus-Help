@@ -1,7 +1,7 @@
-import { useCallback, useReducer } from 'react'
+import { useCallback, useEffect, useReducer } from 'react'
 import { useNavigate } from 'react-router'
 import { ROUTES } from '@/app/router'
-import type { UiLocale } from '@/i18n/languages'
+import { DEFAULT_UI_LOCALE, type UiLocale } from '@/i18n/languages'
 import type { NotificationPermissionState } from '@/services/notifications'
 import { useSettingsStore } from '@/stores/settingsStore'
 import type { CityLocation, UserRole } from '@/types/profile'
@@ -23,6 +23,12 @@ export function useOnboardingFlow(introOnly: boolean) {
   const [state, dispatch] = useReducer(onboardingReducer, !introOnly, initialOnboardingState)
   const navigate = useNavigate()
   const setAppLanguage = useSettingsStore((s) => s.setAppLanguage)
+
+  // Until the language question is answered, the first-run flow is shown in English (main.tsx does the
+  // same before the first paint). The intro replay keeps the language the user already chose.
+  useEffect(() => {
+    if (!introOnly) setAppLanguage(DEFAULT_UI_LOCALE)
+  }, [introOnly, setAppLanguage])
 
   const goHome = useCallback(() => {
     void navigate(ROUTES.home, { replace: true })

@@ -55,20 +55,21 @@ function renderAt(path: string) {
 }
 
 async function skipToSetup(user: UserEvent) {
-  await user.click(screen.getByRole('button', { name: 'Erasmus Help. Toca para continuar.' }))
-  await user.click(await screen.findByRole('button', { name: 'Saltar introdução' }))
-  await screen.findByRole('heading', { level: 1, name: 'Qual é o teu nome?' })
+  await user.click(await screen.findByRole('button', { name: 'Erasmus Help. Tap to continue.' }))
+  await user.click(await screen.findByRole('button', { name: 'Skip intro' }))
+  await screen.findByRole('heading', { level: 1, name: 'What’s your name?' })
 }
 
-const continueButton = () => screen.getByRole('button', { name: 'Continuar' })
+/** The flow is in English until the language step; after picking Português it switches to Portuguese. */
+const continueButton = (label: 'Continue' | 'Continuar' = 'Continuar') => screen.getByRole('button', { name: label })
 
 async function answerNameAndRole(user: UserEvent) {
-  await user.type(screen.getByRole('textbox', { name: 'Nome' }), 'Ana Silva')
-  await user.click(continueButton())
-  await screen.findByRole('heading', { level: 1, name: 'Qual é a tua função?' })
-  await user.click(screen.getByRole('radio', { name: /Aluno/ }))
-  await user.click(continueButton())
-  await screen.findByRole('heading', { level: 1, name: 'Qual é a tua língua?' })
+  await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Ana Silva')
+  await user.click(continueButton('Continue'))
+  await screen.findByRole('heading', { level: 1, name: 'What’s your role?' })
+  await user.click(screen.getByRole('radio', { name: /Student/ }))
+  await user.click(continueButton('Continue'))
+  await screen.findByRole('heading', { level: 1, name: 'What’s your main language?' })
 }
 
 beforeAll(async () => {
@@ -88,27 +89,36 @@ afterEach(() => {
 })
 
 describe('OnboardingPage', () => {
+  it('shows the first-run questions in English until the language is chosen, whatever the stored app language', async () => {
+    const user = userEvent.setup()
+    renderAt('/welcome')
+    await skipToSetup(user)
+
+    expect(useSettingsStore.getState().appLanguage).toBe('en')
+    expect(document.documentElement.lang).toBe('en')
+  })
+
   it('validates the name: continue stays disabled and the error is shown until the name is valid', async () => {
     const user = userEvent.setup()
     renderAt('/welcome')
     await skipToSetup(user)
 
-    const input = screen.getByRole('textbox', { name: 'Nome' })
+    const input = screen.getByRole('textbox', { name: 'Name' })
     expect(input).toHaveFocus()
-    expect(continueButton()).toBeDisabled()
-    expect(screen.getByRole('img', { name: 'Passo 1 de 5' })).toBeInTheDocument()
+    expect(continueButton('Continue')).toBeDisabled()
+    expect(screen.getByRole('img', { name: 'Step 1 of 5' })).toBeInTheDocument()
 
     await user.type(input, '42')
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getAllByText('Usa só letras, espaços, apóstrofos, pontos ou hífenes.').length).toBeGreaterThan(0)
-    expect(continueButton()).toBeDisabled()
+    expect(screen.getAllByText('Use only letters, spaces, apostrophes, full stops or hyphens.').length).toBeGreaterThan(0)
+    expect(continueButton('Continue')).toBeDisabled()
 
     await user.clear(input)
-    expect(screen.getAllByText('Escreve o teu nome.').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Please enter your name.').length).toBeGreaterThan(0)
 
     await user.type(input, 'Ana{Enter}')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Qual é a tua função?' })).toHaveFocus()
-    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'What’s your role?' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
     // Nothing is persisted before the end.
     expect(useProfileStore.getState().name).toBe('')
   })
@@ -119,16 +129,20 @@ describe('OnboardingPage', () => {
     await skipToSetup(user)
     await answerNameAndRole(user)
 
-    expect(continueButton()).toBeDisabled()
-    const english = screen.getByRole('radio', { name: /English/ })
-    await user.click(english)
+    expect(continueButton('Continue')).toBeDisabled()
+    const portuguese = screen.getByRole('radio', { name: /Português/ })
+    await user.click(portuguese)
 
-    expect(useSettingsStore.getState().appLanguage).toBe('en')
-    expect(english).toHaveAttribute('aria-checked', 'true')
-    expect(await screen.findByRole('heading', { level: 1, name: 'What’s your main language?' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+    expect(useSettingsStore.getState().appLanguage).toBe('pt-PT')
+    expect(portuguese).toHaveAttribute('aria-checked', 'true')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Qual é a tua língua?' })).toBeInTheDocument()
+    expect(continueButton()).toBeEnabled()
     // "Meu idioma" is only written when the onboarding finishes.
     expect(useProfileStore.getState().myLanguage).toBeNull()
+
+    // Going back keeps the chosen language.
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Qual é a tua função?' })).toBeInTheDocument()
   })
 
   it('asks the real notification permission and, on finish, writes both stores and goes home', async () => {

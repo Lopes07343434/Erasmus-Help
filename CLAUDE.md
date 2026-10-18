@@ -75,7 +75,7 @@ Chat real entre alunos, monitores e admins — não é IA nem chamadas, e não s
 - Desktop (≥1024px): lista de conversas e conversa lado a lado; mobile: lista → conversa.
 - Testes: `npm test` (unitários), `npx supabase test db` (pgTAP) e `npm run test:e2e` (Playwright contra o Supabase local real, `npx supabase start`).
 
-Onboarding: splash → 3 slides de introdução do design → nome → função (Aluno/Monitor) → língua (PT/EN/PL) → localização (país + cidade) → notificações push (opcional, permissão real do browser, nunca simulada).
+Onboarding (em inglês até à pergunta da língua, que muda logo a app para a língua escolhida): splash → 3 slides de introdução do design → nome → função (Aluno/Monitor) → língua (PT/EN/PL) → localização (país + cidade) → notificações push (opcional, permissão real do browser, nunca simulada).
 
 ## i18n
 
