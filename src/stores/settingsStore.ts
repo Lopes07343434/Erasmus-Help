@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { detectUiLocale, isLanguageCode, isUiLocale, type LanguageCode, type UiLocale } from '@/i18n/languages'
+import { DEFAULT_UI_LOCALE, isLanguageCode, isUiLocale, type LanguageCode, type UiLocale } from '@/i18n/languages'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 
@@ -24,7 +24,7 @@ interface SettingsState extends Settings {
 
 const defaults = (): Settings => ({
   theme: 'system',
-  appLanguage: detectUiLocale(),
+  appLanguage: DEFAULT_UI_LOCALE,
   conversationLanguage: 'en',
   notificationsEnabled: false,
 })

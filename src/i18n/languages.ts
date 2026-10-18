@@ -40,13 +40,3 @@ export function getLanguage(code: LanguageCode): LanguageInfo {
 export const isLanguageCode = (v: unknown): v is LanguageCode => typeof v === 'string' && (LANGUAGE_CODES as readonly string[]).includes(v)
 export const isUiLocale = (v: unknown): v is UiLocale => typeof v === 'string' && (UI_LOCALES as readonly string[]).includes(v)
 
-/** Best UI locale for the browser: exact match, then base-language match (pt-BR → pt-PT), else English. */
-export function detectUiLocale(preferred: readonly string[] = typeof navigator !== 'undefined' ? navigator.languages : []): UiLocale {
-  for (const tag of preferred) {
-    if (isUiLocale(tag)) return tag
-    const base = tag.toLowerCase().split('-')[0]
-    const match = UI_LOCALES.find((l) => l.toLowerCase().split('-')[0] === base)
-    if (match) return match
-  }
-  return DEFAULT_UI_LOCALE
-}

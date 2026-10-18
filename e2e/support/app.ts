@@ -50,15 +50,21 @@ function collectErrors(page: Page): string[] {
   return errors
 }
 
-/** First run of the app: splash → intro (skipped) → name → role → language → location → notifications (not now). */
+/** The role options as the onboarding shows them: in English, since the language is only chosen afterwards. */
+const ROLE_LABEL_EN: Record<Person['role'], string> = { Aluno: 'Student', Monitor: 'Monitor' }
+
+/**
+ * First run of the app: splash → intro (skipped) → name → role → language → location → notifications (not now).
+ * Everything before the language step is in English; Português is picked there, so the rest is in Portuguese.
+ */
 export async function onboard(page: Page, { name, role }: Person): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: /Erasmus Help/ }).click()
-  await page.getByRole('button', { name: 'Saltar' }).click()
-  await page.getByRole('textbox', { name: 'Nome' }).fill(name)
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await page.getByRole('radio', { name: new RegExp(`^${role}`) }).click()
-  await page.getByRole('button', { name: 'Continuar' }).click()
+  await page.getByRole('button', { name: 'Skip' }).click()
+  await page.getByRole('textbox', { name: 'Name' }).fill(name)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('radio', { name: new RegExp(`^${ROLE_LABEL_EN[role]}`) }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('radio', { name: 'Português' }).click()
   await page.getByRole('button', { name: 'Continuar' }).click()
   await page.getByRole('button', { name: /País/ }).click()
