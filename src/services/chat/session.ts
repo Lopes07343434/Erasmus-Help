@@ -14,6 +14,7 @@
  * Later changes of name / languages / country / city are pushed with a debounced upsert.
  */
 import { AppError } from '@/services/errors'
+import { unsubscribeFromPush } from '@/services/notifications'
 import { clearPersistedAuth } from '@/services/supabase/authStorage'
 import { getSupabase, type ChatSupabaseClient } from '@/services/supabase/client'
 import { useProfileStore } from '@/stores/profileStore'
@@ -301,6 +302,8 @@ export async function signOutChat(): Promise<void> {
     return
   }
   signingOut = true
+  // Stop pushes for this account while the access token still exists (best effort, bounded).
+  await unsubscribeFromPush({ signal: AbortSignal.timeout(3_000) }).catch(() => undefined)
   try {
     await sb.auth.signOut({ scope: 'local' })
   } catch {

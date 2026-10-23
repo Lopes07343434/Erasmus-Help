@@ -47,5 +47,12 @@ self.addEventListener('push', (event) => {
   if (tag) options.tag = tag
   const lang = text(payload.lang, 12)
   if (lang) options.lang = lang
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    (async () => {
+      // The app is open and in front: the chat already shows the message live, a system notification would be noise.
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      if (windows.some((c) => c.visibilityState === 'visible' && c.focused)) return
+      await self.registration.showNotification(title, options)
+    })(),
+  )
 })

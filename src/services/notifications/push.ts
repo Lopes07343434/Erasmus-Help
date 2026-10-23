@@ -1,6 +1,7 @@
 import { env } from '@/config/env'
 import { AppError, toAppError } from '../errors'
 import { requestJson } from '../http'
+import { getSupabase } from '../supabase/client'
 import { getNotificationPermission, isPushSupported } from './permission'
 
 /**
@@ -9,10 +10,12 @@ import { getNotificationPermission, isPushSupported } from './permission'
  *   - a backend at VITE_API_BASE_URL implementing PUSH_ENDPOINTS
  * Until both are set, subscribeToPush() throws AppError('not-configured') — never a fake success.
  *
- * Proposed backend contract (JSON, HTTPS):
+ * Backend contract (JSON, HTTPS) — implemented by the Supabase Edge Function in supabase/functions/push
+ * (VITE_API_BASE_URL = https://<ref>.supabase.co/functions/v1):
  *   POST {apiBaseUrl}/push/subscribe    { subscription: PushSubscriptionJSON, locale?: string } → 2xx
  *   POST {apiBaseUrl}/push/unsubscribe  { endpoint: string } → 2xx
- * The backend must drop subscriptions the push service answers with 404/410.
+ * Both are sent with the chat account's access token (Authorization: Bearer); the backend ties the
+ * subscription to that account and drops subscriptions the push service answers with 404/410.
  */
 export const PUSH_ENDPOINTS = { subscribe: '/push/subscribe', unsubscribe: '/push/unsubscribe' } as const
 
@@ -65,6 +68,17 @@ async function readyRegistration(): Promise<ServiceWorkerRegistration> {
   }
 }
 
+/** Access token of the chat account (anonymous Supabase session); the push backend only accepts signed-in devices. */
+async function authHeaders(): Promise<Record<string, string>> {
+  try {
+    const { data } = (await getSupabase()?.auth.getSession()) ?? { data: null }
+    const token = data?.session?.access_token
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  } catch {
+    return {}
+  }
+}
+
 function sameKey(current: ArrayBuffer | null, expected: Uint8Array): boolean {
   if (!current || current.byteLength !== expected.length) return false
   const bytes = new Uint8Array(current)
@@ -112,6 +126,7 @@ export async function subscribeToPush(options: PushRequestOptions = {}): Promise
   await requestJson(`${apiBaseUrl}${PUSH_ENDPOINTS.subscribe}`, {
     method: 'POST',
     body: { subscription: subscription.toJSON(), locale: options.locale },
+    headers: await authHeaders(),
     signal: options.signal,
   })
   return subscription
@@ -142,6 +157,7 @@ export async function unsubscribeFromPush(options: Pick<PushRequestOptions, 'sig
     await requestJson(`${env.apiBaseUrl}${PUSH_ENDPOINTS.unsubscribe}`, {
       method: 'POST',
       body: { endpoint: subscription.endpoint },
+      headers: await authHeaders(),
       signal: options.signal,
     }).catch(() => undefined)
   }

@@ -10,7 +10,9 @@ Projeto: `https://nankvmfyyncoopoxqibm.supabase.co` (ref `nankvmfyyncoopoxqibm`)
 | `migrations/20260926090200_chat_rpc.sql` | RPCs (perfil, associação, grupos, leitura, admin) |
 | `migrations/20260926090300_chat_storage_realtime.sql` | bucket privado `chat-audio` + policies, publicação Realtime |
 | `migrations/20260926100000_chat_directory.sql` | IDs sequenciais sem buracos, diretório (pesquisa por ID/nome), conversas diretas com qualquer pessoa, administradores de grupo, fotos (bucket `avatars`) |
-| `apply_all.sql` | as 5 migrações pela ordem, numa única transação (gerado por `node supabase/build-apply-all.mjs`) |
+| `migrations/20261023090000_push.sql` | notificações push: tabela `push_subscriptions` (sem acesso de clientes) + trigger que avisa a Edge Function de cada mensagem nova |
+| `functions/push/` | Edge Function `push`: `/subscribe`, `/unsubscribe` (token do utilizador) e `/notify` (chamado pelo trigger) |
+| `apply_all.sql` | as 6 migrações pela ordem, numa única transação (gerado por `node supabase/build-apply-all.mjs`) |
 | `config.toml` | stack local (`npx supabase start`): login anónimo ligado |
 | `tests/chat_rls.test.sql` | testes pgTAP do chat (87 asserções) |
 | `tests/chat_directory.test.sql` | testes pgTAP da migração 5: IDs, diretório, grupos, fotos, privilégios (247 asserções) |
@@ -119,3 +121,26 @@ Os tipos de domínio (camelCase) estão em `src/services/chat/types.ts`.
 - Notificações com a app fechada (Web Push) precisam de um backend que ainda não existe (`src/services/notifications/push.ts`); com a app aberta em segundo plano há notificações do browser.
 - Sem rate limit por utilizador no envio de mensagens (só os limites gerais da API).
 - Novos membros de um grupo veem o histórico anterior à sua entrada.
+
+## 10. Notificações push (Android, iPhone PWA, desktop)
+
+Chegam com a app fechada. Fluxo: mensagem nova → trigger `messages_notify_push` → `pg_net` chama `POST /functions/v1/push/notify` → a função procura as subscrições dos outros membros da conversa e envia o aviso cifrado (Web Push + VAPID); subscrições que o serviço de push dá como inexistentes (404/410) são apagadas. O telemóvel regista-se com `POST /push/subscribe` com o token da conta do Chat (a app faz isto sozinha depois do login, se as notificações estiverem ativas). Sem chaves/segredos nada é enviado e nada falha.
+
+Só o dono do projeto faz isto (uma vez). Nunca colar chaves privadas em chats, issues ou no frontend.
+
+1. **Chaves VAPID**: `node supabase/scripts/generate_vapid_keys.mjs` (a privada só vai para os segredos da função).
+2. **Segredos da função** (CLI, ou Dashboard → Edge Functions → Secrets):
+   ```bash
+   npx supabase secrets set VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… VAPID_SUBJECT=mailto:o-teu-email PUSH_WEBHOOK_SECRET=$(openssl rand -hex 32)
+   ```
+   (`ALLOWED_ORIGINS` é opcional; por omissão `https://erasmus-help.pontodigital.eu` e `localhost` de desenvolvimento.)
+3. **Publicar a função**: `npx supabase functions deploy push --no-verify-jwt` (a função autentica cada rota; `config.toml` já tem `verify_jwt = false`).
+4. **Aplicar a migração** `20261023090000_push.sql` (`db push` ou colar o `apply_all.sql` no SQL Editor).
+5. **Ligar o trigger** (SQL Editor; `<segredo>` = o mesmo `PUSH_WEBHOOK_SECRET`):
+   ```sql
+   select vault.create_secret('https://nankvmfyyncoopoxqibm.supabase.co/functions/v1/push', 'push_function_url');
+   select vault.create_secret('<segredo>', 'push_webhook_secret');
+   ```
+6. **Frontend** (`.env.production` / variáveis do build): `VITE_VAPID_PUBLIC_KEY=<chave pública>` e `VITE_API_BASE_URL=https://nankvmfyyncoopoxqibm.supabase.co/functions/v1`. Fazer novo deploy.
+
+Segurança: `push_subscriptions` tem RLS ligada, sem policies e sem privilégios para `anon`/`authenticated`; só a função (service role) lê/escreve. A função só aceita endpoints dos serviços de push conhecidos (FCM, Mozilla, Apple, Windows) para não poder ser usada para chamar outros servidores, limita 5 dispositivos por conta e ignora mensagens com mais de 5 minutos. O texto da mensagem segue cifrado de ponta a ponta até ao dispositivo (RFC 8291).

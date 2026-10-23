@@ -7,6 +7,10 @@ const mockEnv = vi.hoisted(() => ({
   apiBaseUrl: null as string | null,
 }))
 vi.mock('@/config/env', () => ({ env: mockEnv }))
+const mockSession = vi.hoisted(() => ({ token: null as string | null }))
+vi.mock('../supabase/client', () => ({
+  getSupabase: () => ({ auth: { getSession: async () => ({ data: { session: mockSession.token ? { access_token: mockSession.token } : null } }) } }),
+}))
 
 /** A syntactically valid VAPID public key: 65 bytes, uncompressed point prefix 0x04, base64url. */
 const VALID_KEY_BYTES = [4, ...Array.from({ length: 64 }, (_, i) => (i * 7 + 3) % 256)]
@@ -52,6 +56,7 @@ function stubPushPlatform(permission: NotificationPermission) {
 }
 
 beforeEach(() => {
+  mockSession.token = null
   mockEnv.vapidPublicKey = null
   mockEnv.apiBaseUrl = null
 })
@@ -113,6 +118,14 @@ describe('push subscription', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://api.example/push/subscribe')
     expect(JSON.parse(String(init.body))).toMatchObject({ locale: 'pt-PT', subscription: { endpoint: 'https://push.example/abc' } })
+  })
+
+  it('sends the chat account token to the backend', async () => {
+    mockSession.token = 'user-token'
+    const { fetchMock } = stubPushPlatform('granted')
+    await subscribeToPush()
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer user-token')
   })
 
   it('unsubscribes locally and reports false when there is nothing to remove', async () => {

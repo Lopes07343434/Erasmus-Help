@@ -5,6 +5,7 @@ import { IconButton } from '@/components/ui'
 import { useChatNotifications, useChatSession, useConversations, useUnreadCounts } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { IncomingMessageNotice } from '@/services/chat/api'
+import { isPushConfigured, subscribeToPush } from '@/services/notifications'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { CHAT_PATH, conversationPath } from '../chatPaths'
 import { ChatAvatar } from './ChatAvatar'
@@ -24,6 +25,8 @@ interface ShownNotice extends IncomingMessageNotice {
  *    list itself (it updates live). Auto-hides after 6 s, paused while hovered or focused.
  *  - while the app is in the background, also a system notification (only with the browser permission granted and
  *    notifications enabled in the app), one per conversation.
+ * Registers this device for Web Push once signed in and notifications are enabled (push also arrives with the app
+ * closed; see supabase/functions/push).
  * Keeps the app icon badge in sync with the unread total where the Badging API exists.
  */
 export function ChatNotificationsBridge({ activeConversationId }: { activeConversationId: string | null }) {
@@ -57,6 +60,17 @@ export function ChatNotificationsBridge({ activeConversationId }: { activeConver
     sw.addEventListener('message', onMessage)
     return () => sw.removeEventListener('message', onMessage)
   }, [navigate])
+
+  // Web Push: once signed in, (re)register this device with the push backend. Idempotent, so it also repairs a
+  // subscription the push service rotated; the permission was already asked (onboarding / Definições).
+  const sessionStatus = session.status
+  const locale = i18n.locale
+  useEffect(() => {
+    if (sessionStatus !== 'ready' || !notificationsEnabled || !isPushConfigured()) return
+    const controller = new AbortController()
+    subscribeToPush({ locale, signal: controller.signal }).catch(() => undefined)
+    return () => controller.abort()
+  }, [sessionStatus, notificationsEnabled, locale])
 
   // Only once the list is known (not while connecting/offline): otherwise the badge would blink to 0 on every start.
   useEffect(() => {
