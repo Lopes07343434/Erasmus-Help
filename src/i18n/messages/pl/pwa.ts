@@ -16,6 +16,8 @@ const pwa: NamespaceShape<'pwa'> = {
     body: 'Dodaj Erasmus Help do ekranu głównego: uruchamia się szybciej, na pełnym ekranie i działa nawet bez połączenia.',
     action: 'Zainstaluj',
     installed: 'Aplikacja jest zainstalowana na tym urządzeniu.',
+    later: 'Nie teraz',
+    iosHint: 'iPhone nie instaluje aplikacji automatycznie: wykonaj te kroki, a aplikacja pojawi się na ekranie głównym.',
     steps: {
       ios: {
         title: 'Instalacja na iPhonie lub iPadzie',

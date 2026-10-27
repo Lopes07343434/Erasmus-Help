@@ -16,6 +16,8 @@ const pwa: NamespaceShape<'pwa'> = {
     body: 'Add Erasmus Help to your home screen: it opens faster, full screen, and works even without a connection.',
     action: 'Install',
     installed: 'The app is installed on this device.',
+    later: 'Not now',
+    iosHint: 'iPhone can’t install apps automatically: follow these steps and the app lands on your home screen.',
     steps: {
       ios: {
         title: 'Install on iPhone or iPad',

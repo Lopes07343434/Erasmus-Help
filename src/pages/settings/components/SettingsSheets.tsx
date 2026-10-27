@@ -1,5 +1,6 @@
 import { BrandMark, Tagline, Wordmark } from '@/components/brand'
 import { Button, OptionList, Sheet, type OptionItem } from '@/components/ui'
+import { IosInstallSteps } from '@/components/pwa/IosInstallSteps'
 import { useI18n } from '@/i18n/I18nProvider'
 import { LANGUAGES, type LanguageCode, type LanguageInfo, type UiLocale } from '@/i18n/languages'
 import { APP_VERSION } from '../appVersion'
@@ -53,24 +54,13 @@ export function ConversationLanguageSheet({
   )
 }
 
-const IOS_STEPS = ['step1', 'step2', 'step3'] as const
-
 /** iOS has no install prompt: manual "Add to Home Screen" steps. */
 export function IosInstallSheet({ open, onClose }: BaseSheetProps) {
   const { t } = useI18n()
   return (
     <Sheet open={open} onClose={onClose} title={t('pwa.install.steps.ios.title')}>
       <p className="text-sm leading-[1.5] text-text2">{t('pwa.install.body')}</p>
-      <ol className="m-0 flex list-none flex-col gap-3 p-0 pb-1">
-        {IOS_STEPS.map((step, i) => (
-          <li key={step} className="flex items-start gap-3">
-            <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
-              {i + 1}
-            </span>
-            <span className="min-w-0 pt-[3px] text-[15px] leading-[1.45] text-text">{t(`pwa.install.steps.ios.${step}`)}</span>
-          </li>
-        ))}
-      </ol>
+      <IosInstallSteps />
     </Sheet>
   )
 }
