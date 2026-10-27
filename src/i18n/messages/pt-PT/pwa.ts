@@ -19,6 +19,8 @@ export default {
     body: 'Adiciona o Erasmus Help ao ecrã principal: abre mais depressa, em ecrã inteiro, e funciona mesmo sem ligação.',
     action: 'Instalar',
     installed: 'A app está instalada neste dispositivo.',
+    later: 'Agora não',
+    iosHint: 'O iPhone não permite instalar automaticamente: segue estes passos e a app fica no teu ecrã principal.',
     steps: {
       ios: {
         title: 'Instalar no iPhone ou iPad',
