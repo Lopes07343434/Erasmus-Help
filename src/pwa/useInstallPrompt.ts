@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { detectPlatform, type InstallPlatform } from '@/utils/platform'
 
 /**
  * Install ("Add to Home Screen") state.
@@ -11,7 +12,8 @@ import { useSyncExternalStore } from 'react'
  */
 
 export type InstallOutcome = 'accepted' | 'dismissed' | 'unavailable'
-export type InstallPlatform = 'ios' | 'android' | 'desktop' | 'other'
+export type { InstallPlatform } from '@/utils/platform'
+export { detectPlatform } from '@/utils/platform'
 
 export interface UseInstallPromptResult {
   /** The browser offered a native install prompt that has not been used yet. */
@@ -41,15 +43,6 @@ interface InstallState {
 
 function isBeforeInstallPromptEvent(event: Event): event is BeforeInstallPromptEvent {
   return 'prompt' in event && typeof event.prompt === 'function' && 'userChoice' in event
-}
-
-export function detectPlatform(userAgent: string, maxTouchPoints: number): InstallPlatform {
-  // iPadOS 13+ reports a Mac user agent; touch support gives it away.
-  if (/iPhone|iPad|iPod/i.test(userAgent) || (/Macintosh/i.test(userAgent) && maxTouchPoints > 1)) return 'ios'
-  if (/Android/i.test(userAgent)) return 'android'
-  if (/Mobi|Tablet|KAIOS/i.test(userAgent)) return 'other'
-  if (/Windows|Macintosh|Linux|CrOS/i.test(userAgent)) return 'desktop'
-  return 'other'
 }
 
 const hasDom = typeof window !== 'undefined' && typeof navigator !== 'undefined'

@@ -16,7 +16,7 @@ npm run preview    # servir o build de produção
 ## Stack
 
 React 19 · TypeScript 6 (strict, `noUncheckedIndexedAccess`) · Vite 8 · Tailwind CSS 4 (`@tailwindcss/vite`) · react-router 8 (data router, rotas lazy) · zustand 5 (persist) · lucide-react · vite-plugin-pwa (Workbox) · Vitest + Testing Library. Fontes self-hosted: `@fontsource-variable/manrope`, `@fontsource/jetbrains-mono` (500).
-Supabase: só o **Chat** (auth anónima, Postgres + RLS, Realtime, Storage). O resto da app é local-first (perfil e preferências em localStorage).
+Supabase: o **Chat** (auth anónima, Postgres + RLS, Realtime, Storage) e o **Web Push** (subscrições + Edge Function `send-push`). O resto da app é local-first (perfil e preferências em localStorage).
 
 ## Design — fonte de verdade
 
@@ -61,7 +61,7 @@ Regras:
 
 ## Navegação e âmbito da Fase 1
 
-Rotas: `/welcome` (splash → intro → configuração) · `/` Início · `/chat` Chat (`?tab=conversas|grupos`) · `/chat/:conversationId` · `/translate` Tradutor · `/talk` Conversar (`?mode=person|train`) · `/settings` Definições · `/profile` Perfil · `/admin` (só admins).
+Rotas: `/welcome` (splash → intro → configuração) · `/` Início · `/chat` Chat (`?tab=conversas|grupos`) · `/chat/:conversationId` · `/translate` Tradutor · `/talk` Conversar (`?mode=person|train`) · `/settings` Definições · `/settings/permissions` Permissões (notificações, microfone; é o destino da notificação push de anúncio) · `/profile` Perfil · `/admin` (só admins).
 Nav (bottom no mobile, lateral no desktop): Início · **Chat** (badge de não lidas) · **Conversar (botão central gradiente)** · Definições · Perfil. O Tradutor saiu do menu mas continua acessível pelo card e pela ação rápida do Início.
 Decisões face ao protótipo: o separador "Explorar" e os conteúdos de exemplo do Início (evento ESN, prazos, "Semana 3 de 20") não fazem parte do âmbito → não implementados. "Terminar sessão" passa a "Apagar dados deste dispositivo" (também termina a sessão do Chat neste dispositivo).
 
@@ -97,7 +97,7 @@ Mensagens: `messages/pt-PT/*` é o catálogo de referência; `en` e `pl` são ti
 | Text-to-Speech | `services/speech` | speechSynthesis | `VITE_TTS_PROVIDER` |
 | Tradução | `services/translation` | HTTP → backend, mock | `VITE_TRANSLATION_PROVIDER`, `VITE_API_BASE_URL` |
 | IA (correção, treino) | `services/ai` | HTTP → backend, mock | `VITE_AI_PROVIDER`, `VITE_API_BASE_URL` |
-| Notificações | `services/notifications` | Notification API / Push | `VITE_VAPID_PUBLIC_KEY` |
+| Notificações | `services/notifications` | Notification API + Web Push (VAPID): subscrição em `push_subscriptions` (RPC), envio pela Edge Function `supabase/functions/send-push`; service worker `public/sw-notifications.js` | `VITE_VAPID_PUBLIC_KEY` (+ segredos `VAPID_*`/`PUSH_ADMIN_TOKEN` no Supabase, ver `supabase/README.md` §7) |
 
 A meteorologia nunca é gerada por IA.
 

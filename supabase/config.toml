@@ -384,6 +384,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Web Push sender. Authentication is done inside the function (PUSH_ADMIN_TOKEN for campaigns, the user's access
+# token for the self-test), so the gateway JWT check is off. Secrets: see supabase/README.md §7.
+[functions.send-push]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

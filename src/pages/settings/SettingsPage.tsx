@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Bell, Download, Languages, MessagesSquare, Moon, Sun, UserCog } from 'lucide-react'
+import { Download, Languages, MessagesSquare, Moon, ShieldCheck, Sun, UserCog } from 'lucide-react'
 import { ROUTES } from '@/app/router'
 import { useChatSession } from '@/hooks/chat'
 import { useResolvedTheme } from '@/app/ThemeController'
@@ -9,6 +9,7 @@ import { ListGroup, ListRow, ListSection, ListSectionTitle, ListSwitchRow, PageH
 import { useI18n } from '@/i18n/I18nProvider'
 import { useInstallPrompt } from '@/pwa/useInstallPrompt'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { NotificationsSwitchRow } from './components/NotificationsSwitchRow'
 import { AboutSheet, AppLanguageSheet, ConversationLanguageSheet, IosInstallSheet } from './components/SettingsSheets'
 import { useNotificationToggle } from './useNotificationToggle'
 
@@ -34,26 +35,6 @@ export default function SettingsPage() {
   const install = useInstallPrompt()
   const isChatAdmin = useChatSession().me?.role === 'admin'
   const dark = resolvedTheme === 'dark'
-
-  const unsupported = notifications.permission === 'unsupported'
-  let notificationsDescription
-  if (unsupported) {
-    notificationsDescription =
-      install.platform === 'ios' && !install.isStandalone ? t('pwa.notifications.iosInstallRequired') : t('pwa.notifications.states.unsupported.body')
-  } else if (notifications.permission === 'denied') {
-    notificationsDescription = (
-      <>
-        <span className="block font-semibold text-text2">{t('pwa.notifications.states.denied.title')}</span>
-        {t(`pwa.notifications.reenable.${install.platform}`)}
-      </>
-    )
-  } else if (notifications.requesting) {
-    notificationsDescription = t('settings.notifications.requesting')
-  } else if (notifications.checked) {
-    notificationsDescription = notifications.pushConfigured ? t('settings.notifications.on') : t('pwa.notifications.pushUnavailable')
-  } else {
-    notificationsDescription = t('settings.notifications.off')
-  }
 
   const showInstall = !install.installed && (install.canInstall || install.platform === 'ios')
   const onInstall = () => {
@@ -91,14 +72,8 @@ export default function SettingsPage() {
       </section>
 
       <ListSection title={t('settings.sections.notifications')}>
-        <ListSwitchRow
-          icon={Bell}
-          label={t('settings.notifications.label')}
-          description={notificationsDescription}
-          checked={notifications.checked}
-          disabled={unsupported || notifications.requesting}
-          onCheckedChange={notifications.toggle}
-        />
+        <NotificationsSwitchRow notifications={notifications} />
+        <ListRow icon={ShieldCheck} label={t('settings.permissions.rowLabel')} description={t('settings.permissions.rowHint')} to={ROUTES.permissions} />
       </ListSection>
 
       <ListSection title={t('settings.sections.app')}>

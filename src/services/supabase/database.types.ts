@@ -378,6 +378,10 @@ export type Database = {
         }[]
       }
       mark_conversation_read: { Args: { p_conversation: string }; Returns: string }
+      register_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_locale?: string; p_p256dh: string; p_platform?: string }
+        Returns: undefined
+      }
       remove_group_member: { Args: { p_conversation: string; p_user_id: string }; Returns: undefined }
       remove_student_association: { Args: { p_student_id: string }; Returns: undefined }
       rename_group: { Args: { p_conversation: string; p_name: string }; Returns: undefined }
@@ -400,6 +404,7 @@ export type Database = {
       }
       set_my_avatar: { Args: { p_path?: string }; Returns: string }
       start_direct_conversation: { Args: { p_public_id: number }; Returns: string }
+      unregister_push_subscription: { Args: { p_endpoint: string }; Returns: undefined }
       upsert_my_profile: {
         Args: {
           p_app_language?: string

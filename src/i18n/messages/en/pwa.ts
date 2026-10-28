@@ -46,6 +46,14 @@ const pwa: NamespaceShape<'pwa'> = {
     },
     safariMac: 'In Safari (Mac): File → Add to Dock.',
   },
+  push: {
+    announcement: {
+      title: 'Push notifications are now available',
+      body: 'Turn them on to get Erasmus Help messages and news.',
+      action: 'See permissions',
+      dismiss: 'Dismiss notice',
+    },
+  },
   notifications: {
     title: 'Notifications',
     ask: {

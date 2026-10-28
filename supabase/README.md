@@ -10,9 +10,12 @@ Projeto: `https://nankvmfyyncoopoxqibm.supabase.co` (ref `nankvmfyyncoopoxqibm`)
 | `migrations/20260926090200_chat_rpc.sql` | RPCs (perfil, associação, grupos, leitura, admin) |
 | `migrations/20260926090300_chat_storage_realtime.sql` | bucket privado `chat-audio` + policies, publicação Realtime |
 | `migrations/20260926100000_chat_directory.sql` | IDs sequenciais sem buracos, diretório (pesquisa por ID/nome), conversas diretas com qualquer pessoa, administradores de grupo, fotos (bucket `avatars`) |
-| `apply_all.sql` | as 5 migrações pela ordem, numa única transação (gerado por `node supabase/build-apply-all.mjs`) |
+| `migrations/20261028090000_push_notifications.sql` | Web Push: `push_subscriptions` (dispositivos), `push_deliveries` (campanhas já entregues), RPCs `register_push_subscription` / `unregister_push_subscription`, audiência `push_pending_subscriptions` (só `service_role`) |
+| `functions/send-push/` | Edge Function que envia as notificações push reais (VAPID); textos em pt-PT/en/pl em `functions/_shared/campaigns.ts` |
+| `apply_all.sql` | as 6 migrações pela ordem, numa única transação (gerado por `node supabase/build-apply-all.mjs`) |
 | `config.toml` | stack local (`npx supabase start`): login anónimo ligado |
 | `tests/chat_rls.test.sql` | testes pgTAP do chat (87 asserções) |
+| `tests/push_notifications.test.sql` | testes pgTAP do Web Push: validação, posse do endpoint, limite de 10 dispositivos, privilégios, audiência (30 asserções) |
 | `tests/chat_directory.test.sql` | testes pgTAP da migração 5: IDs, diretório, grupos, fotos, privilégios (247 asserções) |
 | `scripts/` | testes contra a stack local em execução: concorrência dos IDs e segurança pela API HTTP (ver §6) |
 
@@ -32,7 +35,7 @@ npx supabase link --project-ref nankvmfyyncoopoxqibm
 npx supabase db push
 ```
 Se o projeto já recebeu o `apply_all.sql`, marcar antes as migrações como aplicadas:
-`npx supabase migration repair --status applied 20260926090000 20260926090100 20260926090200 20260926090300 20260926100000`.
+`npx supabase migration repair --status applied 20260926090000 20260926090100 20260926090200 20260926090300 20260926100000` (a migração `20261028090000_push_notifications` é nova: correr `db push` ou colar o `apply_all.sql`).
 
 ### Verificação rápida (SQL Editor)
 ```sql
@@ -90,7 +93,42 @@ npm run test:e2e                                     # Playwright (raiz do repo)
 - O script de concorrência usa `psql` (`DB_URL`, por omissão a base local) e no fim repõe o contador se ninguém mais se registou (`KEEP_COUNTER=1` para não repor). O da API lê `API_URL`/`PUBLISHABLE_KEY`/`SECRET_KEY` do ambiente ou de `supabase status -o env`.
 - `config.toml` sobe o limite local de logins anónimos (a suite E2E cria muitas contas); em produção o limite define-se no Dashboard.
 
-## 7. Tipos TypeScript
+## 7. Notificações push (Web Push)
+
+Notificações reais, entregues pelo serviço push do browser (FCM no Chrome/Android) mesmo com a app fechada. Fluxo: o dispositivo subscreve (`PushManager`, chave pública VAPID) → `register_push_subscription` guarda a subscrição → a Edge Function `send-push` envia com a chave **privada** VAPID → o service worker (`public/sw-notifications.js`) mostra a notificação → o toque abre `/settings/permissions`.
+
+**Só chega a quem deu permissão de notificações** (regra do browser, não há forma de contornar). A app subscreve sozinha os dispositivos que já tinham permissão (onboarding/Definições) quando abrem a app com push configurado, e mostra a utilizadores Android que ainda não foram perguntados um cartão que abre o mesmo ecrã de permissões.
+
+### Configurar (uma vez)
+```bash
+node supabase/scripts/generate_vapid_keys.mjs        # imprime VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY
+npx supabase secrets set --project-ref nankvmfyyncoopoxqibm \
+  VAPID_PUBLIC_KEY=<pública> VAPID_PRIVATE_KEY=<privada> PUSH_ADMIN_TOKEN=<texto aleatório longo> \
+  VAPID_SUBJECT=https://erasmus-help.pontodigital.eu
+npx supabase functions deploy send-push --project-ref nankvmfyyncoopoxqibm --no-verify-jwt
+```
+1. Aplicar a migração `20261028090000_push_notifications` (§1).
+2. GitHub → Settings → Secrets and variables → Actions → **Variables**: `VITE_VAPID_PUBLIC_KEY` = a chave **pública** (é pública por desenho). O próximo deploy da app já a leva no build. A chave privada **nunca** vai para o frontend nem para o git.
+3. Guardar `PUSH_ADMIN_TOKEN` num gestor de palavras-passe: é a única credencial que autoriza envios em massa.
+
+### Enviar o aviso "notificações push disponíveis" a todos os Android
+```bash
+FN=https://nankvmfyyncoopoxqibm.supabase.co/functions/v1/send-push
+curl -s -X POST $FN -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"campaign":"push-available","dryRun":true}'        # quantos dispositivos Android vão receber
+curl -s -X POST $FN -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"campaign":"push-available"}'                       # envia (500 por chamada; repetir enquanto "hasMore": true)
+```
+- Cada dispositivo recebe a campanha **uma só vez** (`push_deliveries`): pode repetir o comando (ou agendá-lo, p. ex. 1×/dia com `pg_cron` + `pg_net`) para apanhar quem se subscreveu entretanto.
+- O texto sai no idioma da app da conta (`profiles.app_language`; senão o guardado na subscrição; senão inglês). `"platform"` aceita `android` (por omissão), `ios`, `desktop`, `other` ou `all`.
+- A resposta traz `sent`, `removed` (subscrições mortas, 404/410, são apagadas), `failed` e `failures` por código HTTP (401/403 = chave VAPID errada).
+- Novas campanhas: acrescentar uma entrada a `functions/_shared/campaigns.ts` (textos nos 3 idiomas; o teste `serviceWorker.test.ts` falha se faltar um) e voltar a fazer deploy.
+- Teste de ponta a ponta no telemóvel: **Definições → Permissões → Enviar notificação de teste** (1 por 30 s, só para os dispositivos do próprio utilizador).
+
+### Segurança
+`push_subscriptions` não tem policies nem privilégios para `anon`/`authenticated` (o endpoint + chaves permitem enviar para aquele dispositivo): só os RPCs `security definer` (sempre sobre `auth.uid()`) e o `service_role` lhes tocam. A função valida o `PUSH_ADMIN_TOKEN` em tempo constante, só envia as campanhas do catálogo e o service worker só aceita destinos `/chat`, `/chat/<id>` e `/settings/permissions`.
+
+## 8. Tipos TypeScript
 
 `src/services/supabase/database.types.ts` é gerado a partir da base local com todas as migrações:
 ```bash
@@ -99,7 +137,7 @@ npx supabase gen types typescript --local --schema public > src/services/supabas
 ```
 Os tipos de domínio (camelCase) estão em `src/services/chat/types.ts`.
 
-## 8. Privacidade (incluir no aviso de privacidade da app)
+## 9. Privacidade (incluir no aviso de privacidade da app)
 
 - **Diretório aberto**: qualquer pessoa com conta no chat pode encontrar outra pelo ID ou nome e ver nome, tipo (Aluno/Monitor), ID e foto. Cidade, país e idiomas da app não são expostos.
 - **Fotos** ficam num bucket público com nomes aleatórios: quem tiver o URL consegue vê-las.
@@ -109,13 +147,13 @@ Os tipos de domínio (camelCase) estão em `src/services/chat/types.ts`.
 - **Retenção ainda não implementada**: não há expiração de mensagens nem limpeza de áudios/fotos órfãos (fazer com Edge Function/cron + Storage API).
 - Identidade anónima por dispositivo: se o utilizador apagar os dados do browser, perde a sessão e passa a ter um novo ID (o antigo fica órfão). Considerar mais tarde "linking" da conta anónima a email/OAuth.
 
-## 9. Limitações conhecidas
+## 10. Limitações conhecidas
 
 - **Enumeração**: com contas anónimas e o diretório aberto, um script pode percorrer os IDs e listar nomes/fotos. Mitigação: CAPTCHA + rate limits (§2); evolução: limite de pesquisas por conta, bloquear/denunciar.
 - Qualquer pessoa pode abrir uma conversa com qualquer outra e adicioná-la a grupos (de onde pode sair). Não há ainda bloquear/denunciar.
 - Uma conversa direta arquivada pelos admins (associação aluno↔monitor removida) pode ser reaberta por "Adicionar pessoa".
 - A pesquisa por nome percorre a tabela (`unaccent` por perfil): suficiente para milhares de contas; para mais, índice trigram sobre um nome normalizado.
 - **Realtime DELETE**: eventos DELETE não passam por RLS e chegam (só com a chave primária — UUIDs) a quem subscrever a tabela. Sem conteúdo, mas é metadado. Evolução: Realtime Broadcast com canais privados.
-- Notificações com a app fechada (Web Push) precisam de um backend que ainda não existe (`src/services/notifications/push.ts`); com a app aberta em segundo plano há notificações do browser.
+- Notificações push só chegam a dispositivos com permissão (§7). No iPhone/iPad exigem a app adicionada ao ecrã principal (iOS 16.4+). O envio das notificações de **mensagens do chat** com a app fechada ainda não está ligado (só as campanhas do catálogo); com a app aberta em segundo plano há notificações do browser.
 - Sem rate limit por utilizador no envio de mensagens (só os limites gerais da API).
 - Novos membros de um grupo veem o histórico anterior à sua entrada.

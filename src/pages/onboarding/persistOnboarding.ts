@@ -1,6 +1,6 @@
 import type { LanguageCode } from '@/i18n/languages'
 import { localLanguageOf } from '@/services/geo'
-import { isPushConfigured, subscribeToPush, type NotificationPermissionState } from '@/services/notifications'
+import type { NotificationPermissionState } from '@/services/notifications'
 import { useProfileStore } from '@/stores/profileStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import type { OnboardingAnswers } from './onboardingModel'
@@ -34,8 +34,6 @@ export function persistOnboarding(answers: OnboardingAnswers, permission: Notifi
   const granted = permission === 'granted'
   settings.setNotificationsEnabled(granted)
   profile.completeOnboarding()
-
-  // Best effort: delivery only exists once a VAPID key + backend are configured; never blocks the flow.
-  if (granted && isPushConfigured()) subscribeToPush({ locale: language }).catch(() => undefined)
+  // The push subscription is registered by usePushSync once the chat account exists (right after this).
   return true
 }
