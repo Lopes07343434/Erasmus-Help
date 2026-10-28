@@ -8,9 +8,15 @@ export {
 export {
   getPushSubscription,
   isPushConfigured,
-  PUSH_ENDPOINTS,
   subscribeToPush,
   unsubscribeFromPush,
   urlBase64ToUint8Array,
   type PushRequestOptions,
 } from './push'
+export {
+  registerPushSubscription,
+  sendTestPush,
+  unregisterPushSubscription,
+  type PushDevicePlatform,
+  type PushRegistration,
+} from './registry'

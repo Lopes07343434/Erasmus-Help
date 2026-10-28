@@ -97,6 +97,11 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Notificações bloqueadas')).toBeInTheDocument()
   })
 
+  it('links to the permissions screen', () => {
+    renderSettings()
+    expect(screen.getByRole('link', { name: /Permissões/ })).toHaveAttribute('href', '/settings/permissions')
+  })
+
   it('links to the chat administration for admins only', () => {
     const { unmount } = renderSettings()
     expect(screen.queryByRole('link', { name: /Gerir utilizadores do chat/ })).not.toBeInTheDocument()

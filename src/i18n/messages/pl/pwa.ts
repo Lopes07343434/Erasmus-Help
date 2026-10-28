@@ -46,6 +46,14 @@ const pwa: NamespaceShape<'pwa'> = {
     },
     safariMac: 'W Safari (Mac): Plik → Dodaj do Docka.',
   },
+  push: {
+    announcement: {
+      title: 'Powiadomienia push są już dostępne',
+      body: 'Włącz je, aby otrzymywać wiadomości i nowości z Erasmus Help.',
+      action: 'Zobacz uprawnienia',
+      dismiss: 'Zamknij powiadomienie',
+    },
+  },
   notifications: {
     title: 'Powiadomienia',
     ask: {

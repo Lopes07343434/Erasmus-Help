@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../errors'
 import { isPushConfigured, subscribeToPush, unsubscribeFromPush, urlBase64ToUint8Array } from './push'
+import { registerPushSubscription, unregisterPushSubscription } from './registry'
 
 const mockEnv = vi.hoisted(() => ({
   vapidPublicKey: null as string | null,
-  apiBaseUrl: null as string | null,
+  supabaseUrl: null as string | null,
+  supabasePublishableKey: null as string | null,
 }))
 vi.mock('@/config/env', () => ({ env: mockEnv }))
+vi.mock('./registry', () => ({
+  registerPushSubscription: vi.fn(async () => undefined),
+  unregisterPushSubscription: vi.fn(async () => undefined),
+}))
 
 /** A syntactically valid VAPID public key: 65 bytes, uncompressed point prefix 0x04, base64url. */
 const VALID_KEY_BYTES = [4, ...Array.from({ length: 64 }, (_, i) => (i * 7 + 3) % 256)]
@@ -46,17 +52,24 @@ function stubPushPlatform(permission: NotificationPermission) {
     configurable: true,
     value: { ready: Promise.resolve(registration), getRegistration: async () => registration },
   })
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }))
-  vi.stubGlobal('fetch', fetchMock)
-  return { pushManager, subscription, fetchMock }
+  return { pushManager, subscription }
+}
+
+const configureSupabase = () => {
+  mockEnv.supabaseUrl = 'https://project.supabase.co'
+  mockEnv.supabasePublishableKey = 'sb_publishable_test'
 }
 
 beforeEach(() => {
   mockEnv.vapidPublicKey = null
-  mockEnv.apiBaseUrl = null
+  mockEnv.supabaseUrl = null
+  mockEnv.supabasePublishableKey = null
+  vi.mocked(registerPushSubscription).mockClear()
+  vi.mocked(unregisterPushSubscription).mockClear()
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   Reflect.deleteProperty(navigator, 'serviceWorker')
 })
@@ -67,12 +80,12 @@ describe('push configuration', () => {
   })
 
   it('throws not-configured when the VAPID key is missing', async () => {
-    mockEnv.apiBaseUrl = 'https://api.example'
+    configureSupabase()
     expect(isPushConfigured()).toBe(false)
     await expectAppError(subscribeToPush(), 'not-configured')
   })
 
-  it('throws not-configured when the backend is missing', async () => {
+  it('throws not-configured when Supabase is missing', async () => {
     mockEnv.vapidPublicKey = VALID_KEY
     expect(isPushConfigured()).toBe(false)
     await expectAppError(subscribeToPush(), 'not-configured')
@@ -80,7 +93,7 @@ describe('push configuration', () => {
 
   it('throws not-configured when the VAPID key is malformed', async () => {
     mockEnv.vapidPublicKey = 'not-a-real-key'
-    mockEnv.apiBaseUrl = 'https://api.example'
+    configureSupabase()
     await expectAppError(subscribeToPush(), 'not-configured')
   })
 })
@@ -88,7 +101,7 @@ describe('push configuration', () => {
 describe('push subscription', () => {
   beforeEach(() => {
     mockEnv.vapidPublicKey = VALID_KEY
-    mockEnv.apiBaseUrl = 'https://api.example'
+    configureSupabase()
   })
 
   it('throws not-supported when the browser has no Push API', async () => {
@@ -102,17 +115,29 @@ describe('push subscription', () => {
     expect(pushManager.subscribe).not.toHaveBeenCalled()
   })
 
-  it('subscribes with the VAPID key and registers the subscription with the backend', async () => {
-    const { pushManager, fetchMock } = stubPushPlatform('granted')
+  it('subscribes with the VAPID key and registers the subscription in Supabase', async () => {
+    const { pushManager } = stubPushPlatform('granted')
     await subscribeToPush({ locale: 'pt-PT' })
     expect(pushManager.subscribe).toHaveBeenCalledWith({
       userVisibleOnly: true,
       applicationServerKey: new Uint8Array(VALID_KEY_BYTES),
     })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('https://api.example/push/subscribe')
-    expect(JSON.parse(String(init.body))).toMatchObject({ locale: 'pt-PT', subscription: { endpoint: 'https://push.example/abc' } })
+    expect(registerPushSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ endpoint: 'https://push.example/abc', p256dh: 'p', auth: 'a', locale: 'pt-PT' }),
+    )
+  })
+
+  it('reports the device platform so a campaign can target Android', async () => {
+    stubPushPlatform('granted')
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/126.0 Mobile Safari/537.36')
+    await subscribeToPush()
+    expect(registerPushSubscription).toHaveBeenCalledWith(expect.objectContaining({ platform: 'android' }))
+  })
+
+  it('does not keep a subscription the server could not register for the user', async () => {
+    stubPushPlatform('granted')
+    vi.mocked(registerPushSubscription).mockRejectedValueOnce(new AppError('unavailable'))
+    await expectAppError(subscribeToPush(), 'unavailable')
   })
 
   it('unsubscribes locally and reports false when there is nothing to remove', async () => {
@@ -121,5 +146,13 @@ describe('push subscription', () => {
     pushManager.getSubscription.mockResolvedValueOnce(subscription)
     await expect(unsubscribeFromPush()).resolves.toBe(true)
     expect(subscription.unsubscribe).toHaveBeenCalledTimes(1)
+    expect(unregisterPushSubscription).toHaveBeenCalledWith('https://push.example/abc')
+  })
+
+  it('still unsubscribes locally when the server cannot be told', async () => {
+    const { pushManager, subscription } = stubPushPlatform('granted')
+    pushManager.getSubscription.mockResolvedValueOnce(subscription)
+    vi.mocked(unregisterPushSubscription).mockRejectedValueOnce(new AppError('offline'))
+    await expect(unsubscribeFromPush()).resolves.toBe(true)
   })
 })

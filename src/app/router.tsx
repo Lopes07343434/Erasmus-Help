@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, useSearchParams } from 'react-router'
 import { AppLayout } from '@/layouts/AppLayout'
 import { PageFallback } from '@/components/feedback/PageFallback'
 import { RouteError } from '@/components/feedback/RouteError'
+import { PERMISSIONS_PATH } from '@/services/notifications/paths'
 import { selectIsOnboarded, useProfileStore } from '@/stores/profileStore'
 
 const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage'))
@@ -10,6 +11,7 @@ const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'))
 const TranslatePage = lazy(() => import('@/pages/translate/TranslatePage'))
 const TalkPage = lazy(() => import('@/pages/talk/TalkPage'))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'))
+const PermissionsPage = lazy(() => import('@/pages/settings/PermissionsPage'))
 const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'))
 const ChatLayout = lazy(() => import('@/pages/chat/ChatLayout'))
 const ConversationPage = lazy(() => import('@/pages/chat/ConversationPage'))
@@ -23,6 +25,8 @@ export const ROUTES = {
   chat: '/chat',
   talk: '/talk',
   settings: '/settings',
+  /** Permissions (notifications, microphone). Opened by the push announcement notification. */
+  permissions: PERMISSIONS_PATH,
   profile: '/profile',
   /** Chat administration (linked from Definições for admins only). */
   admin: '/admin',
@@ -68,6 +72,7 @@ export const router = createBrowserRouter([
       },
       { path: ROUTES.talk.slice(1), element: page(<TalkPage />) },
       { path: ROUTES.settings.slice(1), element: page(<SettingsPage />) },
+      { path: ROUTES.permissions.slice(1), element: page(<PermissionsPage />) },
       { path: ROUTES.profile.slice(1), element: page(<ProfilePage />) },
       { path: ROUTES.admin.slice(1), element: page(<AdminPage />) },
     ],

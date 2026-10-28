@@ -5,6 +5,7 @@ import { IconButton } from '@/components/ui'
 import { useChatNotifications, useChatSession, useConversations, useUnreadCounts } from '@/hooks/chat'
 import { useI18n } from '@/i18n/I18nProvider'
 import type { IncomingMessageNotice } from '@/services/chat/api'
+import { isNotificationTarget } from '@/services/notifications/paths'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { CHAT_PATH, conversationPath } from '../chatPaths'
 import { ChatAvatar } from './ChatAvatar'
@@ -46,13 +47,13 @@ export function ChatNotificationsBridge({ activeConversationId }: { activeConver
     pathnameRef.current = pathname
   }, [pathname])
 
-  // A click on a system notification shown by the service worker (public/sw-notifications.js) opens that conversation here.
+  // A click on a system notification shown by the service worker (public/sw-notifications.js) opens its target here (a conversation, or the permissions screen for the push announcement).
   useEffect(() => {
     const sw = typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker : null
     if (typeof sw?.addEventListener !== 'function') return
     const onMessage = (event: MessageEvent<unknown>) => {
       const data = event.data as { type?: unknown; url?: unknown } | null
-      if (data?.type === 'eh:open-url' && typeof data.url === 'string' && /^\/chat(?:\/[A-Za-z0-9-]+)?$/.test(data.url)) void navigate(data.url)
+      if (data?.type === 'eh:open-url' && isNotificationTarget(data.url)) void navigate(data.url)
     }
     sw.addEventListener('message', onMessage)
     return () => sw.removeEventListener('message', onMessage)

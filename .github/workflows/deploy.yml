@@ -50,6 +50,8 @@ jobs:
           VITE_SUPABASE_URL: https://nankvmfyyncoopoxqibm.supabase.co
           # Publishable key: public by design (it ships in the browser bundle); the data is protected by RLS.
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_zva9ZabTjaNDjvI_c_cd3w_eE2SWnrH
+          # Public VAPID key for Web Push (repository variable, not a secret). Empty = push stays off. See supabase/README.md §7.
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
 
       - name: Package
         run: tar -czf release.tar.gz -C dist .

@@ -6,7 +6,7 @@ import { webSpeechSynthesizer } from './webSpeechSynthesizer'
 
 export type * from './types'
 export { listen, DEFAULT_MAX_LISTEN_MS, type ListenHandle, type ListenOptions } from './listen'
-export { getMicrophonePermission, type MicrophonePermission } from './microphone'
+export { getMicrophonePermission, requestMicrophonePermission, type MicrophonePermission } from './microphone'
 
 const unavailableRecognizer: SpeechRecognizer = {
   isSupported: () => false,

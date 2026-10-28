@@ -12,6 +12,8 @@ export interface Settings {
   conversationLanguage: LanguageCode
   /** User preference. The real browser permission is read at runtime (Notification.permission). */
   notificationsEnabled: boolean
+  /** The "push notifications are available" notice was opened or closed: it is never shown again. */
+  pushAnnouncementSeen: boolean
 }
 
 interface SettingsState extends Settings {
@@ -19,6 +21,7 @@ interface SettingsState extends Settings {
   setAppLanguage: (locale: UiLocale) => void
   setConversationLanguage: (code: LanguageCode) => void
   setNotificationsEnabled: (enabled: boolean) => void
+  markPushAnnouncementSeen: () => void
   reset: () => void
 }
 
@@ -27,6 +30,7 @@ const defaults = (): Settings => ({
   appLanguage: detectUiLocale(),
   conversationLanguage: 'en',
   notificationsEnabled: false,
+  pushAnnouncementSeen: false,
 })
 
 export const useSettingsStore = create<SettingsState>()(
@@ -41,13 +45,20 @@ export const useSettingsStore = create<SettingsState>()(
         if (isLanguageCode(code)) set({ conversationLanguage: code })
       },
       setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
+      markPushAnnouncementSeen: () => set({ pushAnnouncementSeen: true }),
       reset: () => set(defaults()),
     }),
     {
       name: 'eh:settings',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ theme, appLanguage, conversationLanguage, notificationsEnabled }) => ({ theme, appLanguage, conversationLanguage, notificationsEnabled }),
+      partialize: ({ theme, appLanguage, conversationLanguage, notificationsEnabled, pushAnnouncementSeen }) => ({
+        theme,
+        appLanguage,
+        conversationLanguage,
+        notificationsEnabled,
+        pushAnnouncementSeen,
+      }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>
         return {
@@ -56,6 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
           appLanguage: isUiLocale(p.appLanguage) ? p.appLanguage : current.appLanguage,
           conversationLanguage: isLanguageCode(p.conversationLanguage) ? p.conversationLanguage : current.conversationLanguage,
           notificationsEnabled: typeof p.notificationsEnabled === 'boolean' ? p.notificationsEnabled : current.notificationsEnabled,
+          pushAnnouncementSeen: typeof p.pushAnnouncementSeen === 'boolean' ? p.pushAnnouncementSeen : current.pushAnnouncementSeen,
         }
       },
     },

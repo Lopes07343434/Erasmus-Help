@@ -13,6 +13,9 @@ import { CHAT_CONVERSATION_PATTERN, CHAT_PATH } from '@/pages/chat/chatPaths'
 // Lazy: it starts the chat session (supabase-js + realtime ≈70 KB gz) after the shell has painted.
 const ChatNotificationsBridge = lazy(() => import('@/pages/chat/components/ChatNotificationsBridge').then((m) => ({ default: m.ChatNotificationsBridge })))
 
+// Lazy for the same reason: registers this device for push once the chat account exists.
+const PushSync = lazy(() => import('@/components/pwa/PushSync').then((m) => ({ default: m.PushSync })))
+
 /**
  * Layout CSS variables (available to every page and to the toast):
  *  --eh-nav-h         bottom nav height incl. safe area (0 on desktop)
@@ -79,6 +82,7 @@ export function AppLayout() {
         {immersive ? null : <BottomNav />}
         <Suspense fallback={null}>
           <ChatNotificationsBridge activeConversationId={activeConversationId} />
+          <PushSync />
         </Suspense>
         <PwaUpdatePrompt />
       </ToastProvider>

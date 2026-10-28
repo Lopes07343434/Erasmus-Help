@@ -49,6 +49,14 @@ export default {
     },
     safariMac: 'No Safari (Mac): Ficheiro → Adicionar à Dock.',
   },
+  push: {
+    announcement: {
+      title: 'Notificações push já disponíveis',
+      body: 'Ativa-as para receberes mensagens e novidades do Erasmus Help.',
+      action: 'Ver permissões',
+      dismiss: 'Fechar aviso',
+    },
+  },
   notifications: {
     title: 'Notificações',
     ask: {
